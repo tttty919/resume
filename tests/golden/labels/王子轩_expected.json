@@ -1,0 +1,21 @@
+{
+  "_note": "人工标注标准答案。注意：硬核AI技术背景，可能是最强候选人。",
+  "basic_info": {
+    "name": "王子轩",
+    "school": "上海交通大学",
+    "major": "人工智能",
+    "degree": "硕士",
+    "work_years": "约1年（商汤+上海AI Lab）",
+    "current_role": "AI产品实习生（商汤）"
+  },
+  "skills": [
+    "Python", "PyTorch", "Transformers", "LangChain", "RAG", "Prompt Engineering",
+    "模型微调", "SFT", "LoRA",
+    "SQL", "Pandas", "NumPy", "Matplotlib", "WandB",
+    "Figma", "PRD编写", "竞品分析"
+  ],
+  "work_experiences_count": 2,
+  "project_experiences_count": 2,
+  "expected_job_match_tier": "high",
+  "_note2": "王牌候选人：AI技术+产品意识，有论文发表和实际落地经验"
+}

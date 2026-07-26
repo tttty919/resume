@@ -7,8 +7,9 @@ uploads/
 # Data (SQLite, knowledge files, job data)
 data/
 
-# Tests & evaluation
-tests/
+# Tests — only exclude resume data, keep eval scripts & labels
+tests/golden/resumes/
+tests/__pycache__/
 
 # ChromaDB vector data
 chroma_data/

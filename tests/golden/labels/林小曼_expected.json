@@ -1,0 +1,20 @@
+{
+  "_note": "人工标注标准答案。注意：此候选人是UX设计师方向，非纯PM。",
+  "basic_info": {
+    "name": "林小曼",
+    "school": "广州美术学院",
+    "major": "交互设计",
+    "degree": "硕士",
+    "work_years": "约1.5年（3段实习）",
+    "current_role": "UX设计师（抖音AI创新产品）"
+  },
+  "skills": [
+    "Figma", "Sketch", "Adobe XD", "Principle", "Blender",
+    "深度访谈", "可用性测试", "问卷调研", "用户旅程地图", "服务蓝图",
+    "Midjourney", "Stable Diffusion", "Galileo AI", "Claude", "Cursor",
+    "HTML", "CSS"
+  ],
+  "work_experiences_count": 3,
+  "project_experiences_count": 2,
+  "expected_job_match_tier": "medium"
+}

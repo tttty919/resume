@@ -1,0 +1,20 @@
+{
+  "_note": "人工标注标准答案",
+  "basic_info": {
+    "name": "陈思远",
+    "school": "华中科技大学",
+    "major": "信息管理与信息系统",
+    "degree": "硕士",
+    "work_years": "约2年（3段实习）",
+    "current_role": "AI产品经理实习生（淘宝）"
+  },
+  "skills": [
+    "PRD编写", "Figma", "Axure", "用户访谈", "竞品分析", "数据埋点设计",
+    "SQL", "Python", "Pandas", "Scikit-learn", "Quick BI", "DataV",
+    "Claude Code", "Cursor", "ChatGPT", "Prompt Engineering",
+    "HTML", "CSS", "JavaScript"
+  ],
+  "work_experiences_count": 3,
+  "project_experiences_count": 1,
+  "expected_job_match_tier": "high"
+}
