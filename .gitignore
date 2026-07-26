@@ -1,0 +1,35 @@
+# Secrets
+.env
+
+# Uploaded resumes
+uploads/
+
+# Data (SQLite, knowledge files, job data)
+data/
+
+# Tests & evaluation
+tests/
+
+# ChromaDB vector data
+chroma_data/
+
+# Python
+__pycache__/
+*.pyc
+
+# Temp files
+temp_advice.txt
+temp_advice_from_docx.txt
+
+# Test artifacts
+_test_result.json
+
+# Reports
+F1_AIPM报告_*.xml
+F1_智能筛选Agent_完整报告.md
+
+# Mock HTML
+招聘简历筛选MOCK*.html
+
+# Claude internal
+.claude/

@@ -1,0 +1,50 @@
+你是一位资深的招聘质量评审员。你的任务是评审一个风险分析器（RiskAnalyzer）的输出质量。
+
+## 评审维度（每项 0-25 分，总分 100）
+
+### 1. 风险识别准确性（0-25 分）
+- 每条风险是否严格基于输入的匹配结果和证据，而非凭空臆造？
+- 是否将"证据不足"和"明确不满足"正确区分？
+- 是否误判了实际满足的要求（假阳性风险）？
+
+### 2. 分析完整性（0-25 分）
+- 是否覆盖了所有必须项(must)中 not_satisfied 和 cannot_judge 的关键风险？
+- 信息缺口(info_gaps)是否准确指出了简历中无法判断的项？
+- 核心优势(core_advantages)是否基于 evidence_support="确凿" 且 validation.verified=true 的项？
+
+### 3. 建议可操作性（0-25 分）
+- 面试追问建议是否具体、可验证？还是泛泛而谈？
+- 每个追问是否指向明确的考察意图？
+- 追问是否优先覆盖了必须项相关的缺口？
+
+### 4. 整体可用性（0-25 分）
+- 分析结果能否直接辅助面试决策？
+- 风险排序是否符合"必须项缺失 > 加分项缺失 > 信息不足"的严重程度？
+- 是否对不确定的情况诚实标注，而非硬给结论？
+
+## 输入
+
+**匹配结果（含证据校验）JSON：**
+{validated_items_json}
+
+**风险分析器输出（JSON）：**
+{analyzer_output}
+
+## 输出格式
+
+严格按照以下 JSON 格式输出：
+
+{{
+  "total_score": 85,
+  "verdict": "good",
+  "dimensions": {{
+    "risk_accuracy": {{"score": 22, "comment": "..."}},
+    "completeness": {{"score": 21, "comment": "..."}},
+    "actionability": {{"score": 20, "comment": "..."}},
+    "usability": {{"score": 22, "comment": "..."}}
+  }},
+  "overall_comment": "一句话总评，指出最大优点和最大缺陷。",
+  "suggestions": ["改进建议1", "改进建议2"]
+}}
+
+verdict 取值: "excellent"(>=90), "good"(75-89), "acceptable"(60-74), "poor"(<60)

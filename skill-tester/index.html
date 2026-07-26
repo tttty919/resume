@@ -1,0 +1,3602 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>F1 智能筛选 — v2.2</title>
+<script src="https://cdn.jsdelivr.net/npm/spark-md5@3.0.2/spark-md5.min.js"></script>
+<style>
+:root{--bg:#F0EEE6;--bg2:#E8E5DD;--panel:rgba(255,255,255,.95);--panel2:rgba(255,255,255,.85);--line:rgba(120,113,108,.14);--text:#1A1A1A;--muted:#78716C;--accent:#D97757;--accent2:#E8A088;--danger:#DC2626;--good:#A8A29E;--warn:#CA8A04;--shadow:0 22px 60px rgba(120,113,108,.10);--r-xl:30px;--r-lg:22px;--r-md:18px}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg);overflow:hidden}
+
+/* Layout */
+.app{display:grid;grid-template-columns:260px 1fr;height:100vh}
+.sidebar{background:rgba(255,255,255,.55);backdrop-filter:blur(14px);border-right:1px solid var(--line);padding:20px 18px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:12px;padding:8px 10px 14px}
+.mark{width:40px;height:40px;border-radius:14px;background:linear-gradient(145deg,#FFF0EB,#F5D5C8);display:grid;place-items:center;flex:0 0 auto}
+.mark::before{content:"✦";color:var(--accent);font-size:18px}
+.brand h1{font-size:18px;line-height:1.2}
+.brand small{color:var(--muted);font-size:12px}
+.nav{display:grid;gap:6px}
+.nav button{border:none;cursor:pointer;background:transparent;text-align:left;padding:13px 14px;border-radius:18px;display:flex;gap:10px;align-items:center;color:var(--text);font-size:14px;transition:.15s}
+.nav button.active,.nav button:hover{background:linear-gradient(90deg,rgba(217,119,87,.10),rgba(255,255,255,.56));box-shadow:inset 0 0 0 1px rgba(217,119,87,.12);transform:translateX(2px)}
+.nav button .ic{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:rgba(255,255,255,.8);color:var(--accent);box-shadow:inset 0 0 0 1px rgba(217,119,87,.12);flex:0 0 auto;font-size:14px}
+.sidebar-footer{margin-top:auto;padding:16px;border-radius:22px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}
+.sidebar-footer .t{font-weight:800;font-size:13px;margin-bottom:6px}
+.sidebar-footer .x{color:var(--muted);font-size:12px;line-height:1.6}
+
+/* Main Area */
+.main{display:grid;grid-template-rows:auto 1fr;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 22px 0}
+.crumb{border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.6);backdrop-filter:blur(12px);padding:10px 16px;font-size:13px;font-weight:700;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.badge{border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.6);padding:10px 16px;font-size:13px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:8px}
+.content{padding:18px 22px 22px;overflow-y:auto}
+
+/* Pages */
+.page{display:none}.page.active{display:block}
+
+/* Common Components */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow);backdrop-filter:blur(14px);padding:22px}
+.section-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:16px}
+.section-head h3{font-size:22px}
+.section-head span{color:var(--muted);font-size:13px}
+.btn{border:none;cursor:pointer;padding:12px 16px;border-radius:999px;font-weight:800;font-size:14px;transition:.15s}
+.btn:hover{transform:translateY(-1px)}
+.primary{background:var(--accent);color:#fff;box-shadow:0 14px 28px rgba(217,119,87,.18)}
+.ghost{background:rgba(255,255,255,.74);border:1px solid var(--line);color:#57534E}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid var(--line);color:#57534E;font-weight:700;font-size:13px}
+.tag-must{background:rgba(217,119,87,.12);color:#B4472C;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.tag-bonus{background:rgba(202,138,4,.12);color:#854D0E;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.status-good{color:var(--good);font-weight:700}
+.status-bad{color:var(--danger);font-weight:700}
+.status-unknown{color:var(--warn);font-weight:700}
+
+/* ===== Page 1: Dashboard ===== */
+.dash-hero{display:grid;grid-template-columns:1.3fr .7fr;gap:18px;margin-bottom:18px}
+.hero-card{padding:28px 30px;min-height:220px;position:relative;overflow:hidden}
+.hero-card::after{content:"";position:absolute;right:10px;top:12px;width:260px;height:260px;background:radial-gradient(circle at 56% 28%,rgba(255,255,255,.95) 0 9%,transparent 10%),radial-gradient(circle at 36% 54%,rgba(217,119,87,.10) 0 10%,transparent 11%),radial-gradient(circle at 64% 66%,rgba(232,160,136,.14) 0 12%,transparent 13%);filter:blur(2px);opacity:.9}
+.hero-card .pill{margin-bottom:16px}
+.hero-card h2{font-size:36px;line-height:1.12;letter-spacing:-.5px;position:relative;z-index:1}
+.hero-card h2 em{font-style:normal;color:var(--accent)}
+.hero-card p{margin-top:14px;font-size:15px;line-height:1.8;color:var(--muted);max-width:560px;position:relative;z-index:1}
+.stat-grid{display:grid;gap:12px}
+.stat-card{padding:16px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(240,238,230,.9));border:1px solid var(--line)}
+.stat-card .k{color:var(--accent);font-size:12px;font-weight:700;text-transform:uppercase}
+.stat-card .v{margin-top:8px;font-size:28px;font-weight:900;letter-spacing:-.5px}
+.stat-card .l{color:var(--muted);font-size:12px;margin-top:4px}
+.dash-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.dash-grid .card h4{font-size:16px;margin-bottom:12px}
+.activity-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.activity-item:last-child{border:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:6px;flex:0 0 auto}
+.activity-text{font-size:13px;line-height:1.6;color:var(--muted)}
+.activity-text b{color:var(--text)}
+
+/* ===== Page 2: Jobs ===== */
+.job-list{display:grid;gap:14px}
+.job-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;padding:16px 22px;background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:22px;cursor:pointer;transition:.15s;min-height:84px}
+.job-item:hover{transform:translateX(3px);box-shadow:0 8px 24px rgba(120,113,108,.08)}
+.job-icon{display:none}
+.job-info h4{font-size:16px;margin-bottom:4px}
+.job-info p{color:var(--muted);font-size:13px}
+.job-meta{text-align:right}
+.job-meta .count{font-size:22px;font-weight:900;color:var(--accent)}
+.job-meta .label{font-size:11px;color:var(--muted)}
+.req-list{display:grid;gap:8px;margin-top:14px}
+.req-item{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;padding:12px 14px;background:rgba(255,255,255,.6);border:1px solid var(--line);border-radius:16px;font-size:13px}
+
+/* ===== Page 3: Upload ===== */
+.upload-zone{border:1.5px dashed rgba(217,119,87,.28);background:rgba(255,255,255,.64);border-radius:24px;min-height:180px;padding:24px;display:grid;grid-template-columns:1fr;gap:16px;align-items:center;cursor:pointer;transition:.2s}
+.upload-zone:hover{background:rgba(255,240,235,.92);border-color:rgba(217,119,87,.45)}
+.upload-zone h4{font-size:20px;margin-bottom:10px}
+.upload-zone p{color:var(--muted);line-height:1.65;font-size:14px}
+.result-feature{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.result-feature:last-child{border:none}
+.feature-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:7px;flex:0 0 auto}
+.feature-text{font-size:13px;line-height:1.6;color:var(--muted)}
+.file-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}
+.file-card{background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center}
+.file-card strong{font-size:13px}
+.file-card span{color:var(--muted);font-size:12px}
+.file-del{border:none;background:rgba(220,38,38,.12);color:var(--danger);border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer;font-size:12px}
+.jd-panel{margin-top:18px}
+.jd-panel textarea{width:100%;border:1px solid var(--line);border-radius:18px;padding:14px;font:inherit;line-height:1.7;background:rgba(255,255,255,.82);outline:none;color:var(--text);min-height:160px;resize:vertical}
+
+/* ===== Page 4: Loading ===== */
+.loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:500px;gap:24px}
+.loading-spinner{width:64px;height:64px;border:4px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ===== Page 4b: Progress (step-by-step) ===== */
+.progress-wrap{padding:10px 0;display:flex;flex-direction:column;gap:16px;max-width:900px;margin:0 auto}
+.progress-bar-wrap{background:rgba(255,255,255,.6);border:1px solid var(--line);border-radius:18px;padding:16px 20px;display:flex;align-items:center;gap:14px}
+.progress-bar-outer{flex:1;height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress-bar-inner{height:100%;background:var(--accent);border-radius:99px;transition:.4s;width:0%}
+.progress-card{background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:20px;overflow:hidden;transition:.2s}
+.progress-card.done{border-color:rgba(22,163,74,.25)}
+.progress-card.error{border-color:rgba(220,38,38,.25)}
+.progress-card-head{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:14px 16px;cursor:pointer}
+.progress-step-dot{width:24px;height:24px;border-radius:50%;border:2px solid var(--line);display:grid;place-items:center;font-size:12px;flex-shrink:0}
+.progress-step-dot.running{border-color:var(--accent);background:rgba(217,119,87,.12);animation:pulse 1.2s ease-in-out infinite}
+.progress-step-dot.ok{border-color:var(--good);background:rgba(22,163,74,.12)}
+.progress-step-dot.err{border-color:var(--danger);background:rgba(220,38,38,.12)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.progress-card-info h4{font-size:15px;margin-bottom:2px}
+.progress-card-info p{font-size:12px;color:var(--muted)}
+.progress-card-body{display:none;padding:0 16px 14px;border-top:1px solid var(--line)}
+.progress-card.expanded .progress-card-body{display:block}
+.review-entry-btn{padding:12px 20px;font-size:14px;margin-top:12px}
+
+/* Inline match items inside progress cards */
+.progress-match-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:8px 10px;margin-bottom:6px;border-radius:10px;background:rgba(0,0,0,.02);font-size:13px}
+.progress-match-item .pmi-left{min-width:0}
+.progress-match-item .pmi-name{font-weight:700;margin-bottom:2px}
+.progress-match-item .pmi-evidence{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:2px}
+.progress-match-item .pmi-meta{font-size:10px;color:var(--muted)}
+.progress-match-item .pmi-status{font-weight:700;font-size:12px;white-space:nowrap;text-align:right}
+.progress-match-item .pmi-satisfied{color:var(--good)}
+.progress-match-item .pmi-not-satisfied{color:var(--danger)}
+.progress-match-item .pmi-cannot-judge{color:var(--warn)}
+.progress-match-item.overridden{border:1px solid rgba(202,138,4,.3);background:rgba(202,138,4,.04)}
+.progress-card-actions{display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);justify-content:flex-end;align-items:center}
+.progress-card-actions .btn{padding:6px 16px;font-size:12px}
+
+/* Expandable resume cards on upload page */
+.resume-card{background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:18px;margin-bottom:10px;overflow:hidden;transition:.2s}
+.resume-card.expanded{border-color:rgba(217,119,87,.3);box-shadow:0 4px 20px rgba(120,113,108,.08)}
+.resume-card-head{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:14px 16px;cursor:pointer;user-select:none}
+.resume-card-head:hover{background:rgba(255,240,235,.4)}
+.resume-card-head .rch-left{min-width:0}
+.resume-card-head .rch-name{font-weight:700;font-size:14px;color:var(--good);margin-bottom:3px}
+.resume-card-head .rch-meta{font-size:12px;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:4px}
+.resume-card-head .rch-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+.resume-card-head .rch-tag{display:inline-block;padding:2px 8px;border-radius:99px;background:rgba(217,119,87,.08);color:var(--accent);font-size:11px;font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resume-card-head .rch-desc{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resume-card-head .rch-toggle{font-size:12px;color:var(--muted);transition:.2s;flex-shrink:0}
+.resume-card.expanded .rch-toggle{transform:rotate(180deg)}
+.resume-card-body{display:none;padding:0 16px 16px;border-top:1px solid var(--line)}
+.resume-card.expanded .resume-card-body{display:block}
+.resume-section{margin-top:14px}
+.resume-section-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.resume-section-title::after{content:'';flex:1;height:1px;background:var(--line)}
+.resume-field{display:grid;grid-template-columns:90px 1fr;gap:6px;margin-bottom:6px;font-size:13px;align-items:baseline}
+.resume-field .rf-label{color:var(--muted);font-size:11px;font-weight:700;text-align:right}
+.resume-field .rf-value{color:var(--text);line-height:1.5;word-break:break-word}
+.resume-field .rf-value input,.resume-field .rf-value textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:4px 8px;font:13px/1.5 inherit;outline:none;background:rgba(255,255,255,.9)}
+.resume-field .rf-value input:focus,.resume-field .rf-value textarea:focus{border-color:var(--accent)}
+.resume-field .rf-value textarea{min-height:48px;resize:vertical}
+.resume-basic-inline{display:flex;flex-wrap:wrap;align-items:center;gap:2px 10px;font-size:13px;line-height:2.2}
+.resume-basic-inline .rbi-item{white-space:nowrap;color:var(--muted);font-size:12px}
+.resume-basic-inline .rbi-item input{border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:12px/1.5 inherit;outline:none;background:rgba(255,255,255,.9);width:auto}
+.resume-basic-inline .rbi-item input:focus{border-color:var(--accent)}
+.resume-basic-inline .rbi-sep{color:var(--line);font-size:14px;margin:0 2px}
+.resume-tags{display:flex;flex-wrap:wrap;gap:5px}
+.resume-tag{display:inline-block;padding:3px 10px;border-radius:99px;background:rgba(217,119,87,.1);color:var(--accent);font-size:12px;font-weight:600}
+.resume-work-block,.resume-project-block{padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:12px;font-size:13px}
+.resume-work-block .rw-company,.resume-project-block .rp-name{font-weight:700;margin-bottom:2px}
+.resume-work-block .rw-role-dur,.resume-project-block .rp-tech{color:var(--muted);font-size:12px;margin-bottom:4px}
+.resume-work-block .rw-desc,.resume-project-block .rp-desc{color:var(--text);line-height:1.6;margin-top:4px}
+.resume-notes{font-size:12px;color:var(--warn);padding:8px 12px;background:rgba(202,138,4,.06);border-radius:10px;line-height:1.6}
+.resume-card-actions{display:flex;gap:8px;margin-top:14px}
+.resume-card-actions button{border:none;cursor:pointer;padding:8px 16px;border-radius:99px;font-weight:700;font-size:12px;transition:.15s}
+.resume-card-actions .btn-edit{background:rgba(255,255,255,.74);border:1px solid var(--line);color:#57534E}
+.resume-card-actions .btn-save{background:var(--accent);color:#fff;display:none}
+.resume-card.editing .btn-edit{display:none}
+.resume-card.editing .btn-save{display:block}
+.resume-card.editing .rf-value:not(.rf-static) span{display:none}
+.resume-card.editing .rf-value:not(.rf-static) input,
+.resume-card.editing .rf-value:not(.rf-static) textarea{display:block}
+.resume-card .rf-value input,.resume-card .rf-value textarea{display:none}
+.resume-card .rf-value span{display:inline}
+
+/* ===== Page 5: Results ===== */
+.results-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.results-header h3{font-size:22px}
+.results-actions{display:flex;gap:8px;flex-wrap:wrap}
+.results-job-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:rgba(217,119,87,.08);border:1px solid rgba(217,119,87,.18);font-size:13px;font-weight:700;color:var(--accent);margin-bottom:14px}
+.compare-bar{display:none;align-items:center;gap:12px;padding:12px 16px;border-radius:18px;background:rgba(255,255,255,.6);border:1px solid var(--line);margin-bottom:16px}
+.compare-bar .compare-count{font-size:13px;color:var(--muted)}
+.compare-bar .compare-count strong{color:var(--text)}
+.candidate-list{display:grid;gap:12px}
+/* Individual candidate row */
+.cand-row{background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:20px;padding:0;overflow:hidden;transition:box-shadow .15s}
+.cand-row:hover{box-shadow:0 8px 24px rgba(120,113,108,.08)}
+.cand-row.expanded{border-color:rgba(217,119,87,.25)}
+.cand-main{display:grid;grid-template-columns:44px 1fr auto auto auto;gap:14px;align-items:center;padding:16px 18px;cursor:pointer}
+.cand-rank{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:rgba(217,119,87,.10);color:var(--accent);font-weight:900;font-size:16px}
+.cand-info{display:grid;gap:3px}
+.cand-name{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.cand-summary{color:var(--muted);font-size:13px;line-height:1.4}
+.cand-score-col{text-align:center;min-width:56px}
+.cand-score-num{font-size:24px;font-weight:900;color:var(--accent)}
+.cand-score-label{font-size:11px;color:var(--muted)}
+.cand-dims{display:flex;gap:6px;flex-wrap:wrap}
+.dim-chip{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.dim-chip.good{background:rgba(22,163,74,.12);color:var(--good)}
+.dim-chip.bad{background:rgba(220,38,38,.12);color:var(--danger)}
+.dim-chip.unknown{background:rgba(202,138,4,.12);color:var(--warn)}
+.cand-actions{display:flex;gap:8px;align-items:center}
+.cmp-check{font-size:12px;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:4px}
+.cmp-check input{accent-color:var(--accent)}
+.act-btn{border:none;cursor:pointer;padding:7px 12px;border-radius:12px;font-size:12px;font-weight:600;background:rgba(255,255,255,.8);border:1px solid var(--line);color:var(--muted);transition:.12s}
+.act-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.expand-arrow{font-size:12px;color:var(--muted);transition:transform .2s}
+.cand-row.expanded .expand-arrow{transform:rotate(180deg)}
+/* Recommendation tag */
+.rec{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.rec-good{background:rgba(22,163,74,.12);color:var(--good)}
+.rec-review{background:rgba(202,138,4,.12);color:var(--warn)}
+.rec-bad{background:rgba(220,38,38,.12);color:var(--danger)}
+/* Expand area */
+.cand-expand{display:none;padding:0 18px 18px;border-top:1px solid var(--line);margin:0 18px}
+.cand-expand.open{display:block;padding-top:16px}
+.expand-content{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.expand-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px}
+.expand-left .dim-row{display:grid;grid-template-columns:1fr 170px auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.04)}
+.dim-row .dim-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+.tag-must{font-size:10px;padding:2px 6px;border-radius:999px;background:rgba(220,38,38,.1);color:var(--danger);font-weight:700}
+.tag-bonus{font-size:10px;padding:2px 6px;border-radius:999px;background:rgba(217,119,87,.1);color:var(--accent);font-weight:700}
+.dim-bar-wrap{display:flex;align-items:center;gap:6px}
+.dim-bar{flex:1;height:6px;border-radius:3px;background:rgba(0,0,0,.06)}
+.dim-fill{height:100%;border-radius:3px;transition:width .3s}
+.dim-val{font-size:11px;font-weight:700;color:var(--muted);min-width:28px}
+.dim-status{font-size:11px;font-weight:700;text-align:right}
+.dim-status.satisfied{color:var(--good)}
+.dim-status.not_satisfied{color:var(--danger)}
+.dim-status.cannot_judge{color:var(--warn)}
+.expand-left{display:flex;flex-direction:column}
+.expand-right{display:flex;flex-direction:column;justify-content:space-between}
+.expand-right-top{display:flex;flex-direction:column;gap:10px}
+.expand-reason{padding:12px 14px;border-radius:14px;background:rgba(217,119,87,.04);border:1px solid rgba(217,119,87,.10);font-size:13px;line-height:1.7;margin-bottom:14px}
+.reason-item{padding:4px 0}
+.reason-item.good{color:var(--good)}
+.reason-item.bad{color:var(--danger)}
+.review-inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.review-qs{margin-top:12px;display:grid;gap:6px}
+.rq{padding:8px 12px;border-radius:12px;background:rgba(202,138,4,.06);border:1px solid rgba(202,138,4,.14);font-size:12px;line-height:1.5;color:var(--warn)}
+.expand-footer{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+
+/* ===== Compare Modal (参考小红书LITMUS设计) ===== */
+.compare-modal{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:24px}
+.compare-modal.open{display:flex}
+.compare-modal-inner{background:#fff;border-radius:18px;border:1px solid var(--line);box-shadow:0 32px 80px rgba(0,0,0,.10);width:100%;max-width:1100px;max-height:90vh;overflow-y:auto;padding:22px 26px}
+.compare-modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.compare-modal-header h3{font-size:17px;font-weight:700}
+.compare-modal-header .sub{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.compare-close{border:none;background:transparent;width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;display:grid;place-items:center;color:var(--muted);flex:0 0 auto;margin-left:12px;margin-top:-4px}
+.compare-close:hover{background:rgba(0,0,0,.05);color:var(--text)}
+/* Cards grid */
+.compare-cards{display:grid;gap:14px}
+.compare-card{border:1px solid var(--line);border-radius:14px;padding:16px;background:#fff;display:flex;flex-direction:column;min-width:0}
+.compare-card-header{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;margin-bottom:8px}
+.compare-card-name{font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
+.compare-card-score{font-size:22px;font-weight:900;color:var(--text);text-align:right;line-height:1}
+.compare-card-desc{font-size:11px;color:var(--muted);line-height:1.55;margin-bottom:14px}
+/* Stats grid */
+.compare-stats{display:grid;gap:12px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.compare-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.compare-stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.compare-stat-label{font-size:10px;color:#6B7280;font-weight:600;letter-spacing:.02em}
+.compare-stat-value{font-size:15px;font-weight:700;color:var(--text);line-height:1.2;margin-top:2px}
+.compare-stat-value.hi{color:#92400E;background:#FEF3C7;padding:3px 8px;border-radius:6px;display:inline-block;width:fit-content;font-size:14px}
+/* Match & Risk sections */
+.compare-section-title{font-size:11px;font-weight:700;margin:10px 0 6px;display:flex;align-items:center;gap:4px}
+.compare-section-title.match{color:var(--good)}
+.compare-section-title.risk{color:var(--warn)}
+.compare-list{list-style:none;font-size:11px;color:var(--text);line-height:1.7;margin-bottom:8px}
+.compare-list li{padding:1px 0}
+/* Bottom action */
+.compare-action{margin-top:auto;padding-top:14px}
+.compare-action-btn{width:100%;padding:9px;border:1px solid var(--line);border-radius:10px;background:#F5F5F4;color:#6B7280;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:.15s}
+.compare-action-btn:hover{background:#E7E5E4;color:var(--text);border-color:var(--muted)}
+
+/* ===== Page 6: Detail ===== */
+.detail-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+.detail-header h3{font-size:22px}
+.back-btn{cursor:pointer;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.7);font-weight:700;font-size:13px}
+/* ===== Decision Panel (Skill 5 聚合输出) ===== */
+.decision-panel{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+.decision-main{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr;gap:20px;padding:22px 24px;border-radius:var(--r-xl);background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(255,248,245,.95));border:1px solid var(--line);box-shadow:var(--shadow)}
+.decision-score-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:100px}
+.decision-score{font-size:52px;font-weight:900;letter-spacing:-2px;line-height:1;color:var(--accent)}
+.decision-score-label{font-size:12px;color:var(--muted);margin-top:4px}
+.decision-tier{padding:6px 14px;border-radius:999px;font-size:12px;font-weight:800;margin-top:8px;letter-spacing:.5px}
+.decision-tier.strong{background:rgba(22,163,74,.12);color:#166534;border:1px solid rgba(22,163,74,.25)}
+.decision-tier.good{background:rgba(22,163,74,.08);color:#15803d;border:1px solid rgba(22,163,74,.18)}
+.decision-tier.review{background:rgba(202,138,4,.12);color:#92400e;border:1px solid rgba(202,138,4,.25)}
+.decision-tier.weak{background:rgba(220,38,38,.12);color:#991b1b;border:1px solid rgba(220,38,38,.25)}
+.decision-info{display:flex;flex-direction:column;gap:10px;min-width:0}
+.decision-info h3{font-size:20px;letter-spacing:-.3px}
+.decision-meta{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.decision-stat{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.decision-stat .dot{width:8px;height:8px;border-radius:50%}
+.decision-stat .dot.sat{background:var(--good)}
+.decision-stat .dot.not{background:var(--danger)}
+.decision-stat .dot.unk{background:var(--warn)}
+.decision-reason{font-size:13px;color:var(--muted);line-height:1.6;padding:8px 12px;border-radius:12px;background:rgba(217,119,87,.04);border:1px solid rgba(217,119,87,.08)}
+.decision-section{padding:18px 20px;border-radius:var(--r-lg);background:rgba(255,255,255,.75);border:1px solid var(--line)}
+.decision-section h4{font-size:14px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.decision-section h4 .count-badge{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:600}
+.decision-section.advantages h4 .count-badge{background:rgba(22,163,74,.12);color:#166534}
+.decision-section.risks h4 .count-badge{background:rgba(202,138,4,.12);color:#92400e}
+.decision-section.agent h4 .count-badge{background:rgba(37,99,235,.12);color:#1e40af}
+.decision-section.questions h4 .count-badge{background:rgba(220,38,38,.12);color:#991b1b}
+.decision-list{list-style:none;display:grid;gap:6px}
+.decision-list li{font-size:13px;line-height:1.55;padding:6px 10px;border-radius:10px;display:flex;gap:8px;align-items:flex-start}
+.decision-list li.good{background:rgba(22,163,74,.04);color:#166534}
+.decision-list li.bad{background:rgba(202,138,4,.04);color:#92400e}
+.decision-list li.info{background:rgba(37,99,235,.04);color:#1e40af}
+.decision-list li .ico{flex:0 0 auto;font-size:14px;margin-top:1px}
+.decision-actions{display:flex;gap:10px;flex-wrap:wrap;padding-top:8px}
+.decision-actions .btn{padding:12px 20px;font-size:14px}
+/* Collapsible match cards */
+.match-card{cursor:pointer;user-select:none;transition:background .15s}
+.match-card:hover{background:rgba(255,255,255,.88)}
+.match-card .match-head{pointer-events:none}
+.match-card .match-body,.match-card .match-evidence,.match-card .confidence-bar,.match-card .review-flag{transition:max-height .25s ease,opacity .25s ease,margin .25s ease}
+.match-card.collapsed .match-body{max-height:0!important;overflow:hidden!important;opacity:0!important;margin:0!important}
+.match-card.collapsed .match-evidence{max-height:0!important;overflow:hidden!important;opacity:0!important;margin:0!important;padding:0!important}
+.match-card.collapsed .confidence-bar{max-height:0!important;overflow:hidden!important;opacity:0!important;margin:0!important}
+.match-card.collapsed .review-flag{max-height:0!important;overflow:hidden!important;opacity:0!important;margin:0!important}
+.match-card.collapsed div[style]{max-height:0!important;overflow:hidden!important;opacity:0!important;margin:0!important}
+.match-collapse-icon{font-size:12px;color:var(--muted);transition:transform .2s;margin-left:auto;pointer-events:auto}
+.match-card.collapsed .match-collapse-icon{transform:rotate(-90deg)}
+.match-card .match-hint{display:none;font-size:11px;color:var(--muted);margin-top:4px;pointer-events:none}
+.match-card.collapsed .match-hint{display:block}
+.match-list{display:grid;gap:10px}
+.match-card{padding:12px 14px;border-radius:20px;background:rgba(255,255,255,.72);border:1px solid var(--line)}
+.match-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.match-head h4{font-size:13px}
+.match-status{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.match-status.satisfied{background:rgba(22,163,74,.12);color:var(--good)}
+.match-status.not_satisfied{background:rgba(220,38,38,.12);color:var(--danger)}
+.match-status.cannot_judge{background:rgba(202,138,4,.12);color:var(--warn)}
+.match-body{font-size:12px;color:var(--muted);line-height:1.6}
+.match-evidence{margin-top:8px;padding:8px 12px;border-radius:14px;background:rgba(217,119,87,.04);border:1px solid rgba(217,119,87,.10);font-size:12px;line-height:1.5}
+.match-evidence::before{content:"📋 证据原文";display:block;font-weight:700;color:var(--accent);margin-bottom:4px;font-size:11px}
+.confidence-bar{margin-top:8px;display:flex;align-items:center;gap:10px}
+.conf-track{flex:1;height:8px;border-radius:4px;background:rgba(0,0,0,.06)}
+.conf-fill{height:100%;border-radius:4px;background:var(--accent)}
+.conf-val{font-size:11px;font-weight:700;color:var(--accent)}
+.review-flag{margin-top:6px;padding:6px 10px;border-radius:12px;background:rgba(202,138,4,.08);border:1px solid rgba(202,138,4,.2);font-size:11px;color:var(--warn)}
+
+/* Human Review */
+.review-section{margin-top:24px;padding:18px;border-radius:22px;background:rgba(255,255,255,.72);border:1px solid var(--line)}
+.review-section h4{font-size:16px;margin-bottom:12px}
+.review-questions{display:grid;gap:10px;margin-bottom:14px}
+.review-q{padding:10px 14px;border-radius:14px;background:rgba(202,138,4,.06);border:1px solid rgba(202,138,4,.14);font-size:13px;line-height:1.5;display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.review-q-actions{display:flex;gap:6px;align-items:center}
+.review-choice{border:1px solid var(--line);background:rgba(255,255,255,.75);border-radius:999px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:700;color:var(--muted)}
+.review-choice.ok{color:#166534;border-color:rgba(22,101,52,.25);background:rgba(22,163,74,.08)}
+.review-choice.no{color:var(--danger);border-color:rgba(220,38,38,.22);background:rgba(220,38,38,.08)}
+.review-outcome{grid-column:1 / -1;font-size:12px;color:var(--muted);display:none}
+.review-q.confirmed{border-color:rgba(22,163,74,.28);background:rgba(22,163,74,.06)}
+.review-q.rejected{border-color:rgba(220,38,38,.24);background:rgba(220,38,38,.06)}
+.review-actions{display:flex;gap:10px;flex-wrap:wrap}
+.review-result{margin-top:12px;padding:10px 14px;border-radius:14px;background:rgba(217,119,87,.06);border:1px solid rgba(217,119,87,.12);font-size:13px;color:var(--muted);display:none}
+.agent-insight{margin-bottom:14px;padding:12px 14px;border-radius:16px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.12)}
+.agent-insight-title{font-size:13px;font-weight:800;color:var(--text);margin-bottom:8px}
+.agent-checks{display:grid;gap:7px}
+.agent-check{display:flex;gap:8px;font-size:12px;line-height:1.55;color:var(--muted)}
+.agent-check::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent);margin-top:7px;flex:0 0 auto}
+.agent-update{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(22,163,74,.07);border:1px solid rgba(22,163,74,.16);font-size:13px;line-height:1.6;color:var(--text);display:none}
+.agent-update b{color:var(--good)}
+
+/* ===== Settings Page ===== */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.setting-card{padding:18px;border-radius:22px;background:rgba(255,255,255,.72);border:1px solid var(--line)}
+.setting-card h4{font-size:16px;margin-bottom:12px}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.setting-row:last-child{border:none}
+.setting-row .label{font-size:14px}
+.setting-row .value{font-size:13px;color:var(--accent);font-weight:700}
+.toggle{width:48px;height:26px;border-radius:999px;background:rgba(120,113,108,.2);position:relative;cursor:pointer}
+.toggle::before{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.12);transition:.2s}
+.toggle.on{background:var(--accent)}
+.toggle.on::before{left:25px}
+
+/* Expandable Synonym Library */
+.syn-expandable{display:grid;gap:8px;margin-top:12px}
+.syn-item{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:rgba(255,255,255,.6);transition:.15s}
+.syn-item:hover{border-color:rgba(217,119,87,.2)}
+.syn-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;cursor:pointer;user-select:none}
+.syn-header:hover{background:rgba(217,119,87,.03)}
+.syn-term{font-size:14px;font-weight:600;color:var(--text)}
+.syn-meta{display:flex;gap:8px;align-items:center}
+.syn-cat{font-size:11px;padding:3px 10px;border-radius:999px;background:rgba(217,119,87,.08);color:var(--accent);font-weight:600}
+.syn-count{font-size:11px;color:var(--muted)}
+.syn-arrow{font-size:12px;color:var(--muted);transition:transform .2s}
+.syn-item.open .syn-arrow{transform:rotate(180deg)}
+.syn-body{display:none;padding:4px 14px 14px;border-top:1px solid var(--line)}
+.syn-item.open .syn-body{display:block}
+.syn-body-title{font-size:12px;font-weight:600;color:var(--muted);margin:10px 0 8px}
+.syn-tags{display:flex;flex-wrap:wrap;gap:6px}
+.syn-tag{padding:5px 12px;border-radius:999px;font-size:12px;background:rgba(120,113,108,.06);color:var(--text);border:1px solid var(--line)}
+
+/* Modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);z-index:1000;place-items:center}
+.modal-overlay.show{display:grid}
+.modal{background:var(--panel);border-radius:var(--r-xl);box-shadow:0 32px 100px rgba(0,0,0,.18);padding:28px;max-width:900px;width:92%;max-height:85vh;overflow-y:auto}
+.modal h3{font-size:20px;margin-bottom:16px}
+.modal-close{float:right;cursor:pointer;width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.8);display:grid;place-items:center;font-size:16px}
+
+/* Jobs Page Enhanced */
+.jobs-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.jobs-search{flex:1;min-width:200px;padding:12px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.72);font:inherit;outline:none;font-size:14px}
+.jobs-search:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(217,119,87,.10)}
+.jobs-tabs{display:flex;gap:6px;margin-bottom:16px}
+.jobs-tabs .tab{padding:8px 16px;border-radius:999px;font-size:13px;font-weight:700;cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.5);color:var(--muted);transition:.15s}
+.jobs-tabs .tab.active{background:rgba(217,119,87,.10);color:var(--accent);border-color:rgba(217,119,87,.2)}
+.job-actions{display:none}
+.job-item:hover .job-actions{opacity:1}
+.job-actions button{border:none;cursor:pointer;padding:6px 10px;border-radius:12px;font-size:12px;font-weight:600;background:rgba(255,255,255,.8);border:1px solid var(--line);color:var(--muted);transition:.12s}
+.job-actions button:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.job-status{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.job-status.active{background:rgba(22,163,74,.12);color:var(--good)}
+.job-status.draft{background:rgba(202,138,4,.12);color:var(--warn)}
+.job-status.closed{background:rgba(148,148,148,.12);color:#888}
+
+/* Job Create/Edit Modal */
+.job-form{display:grid;grid-template-columns:1fr 280px;gap:24px}
+.job-form-main{display:grid;gap:16px}
+.job-form-side{display:grid;gap:14px;align-content:start}
+.form-group{display:grid;gap:6px}
+.form-group label{font-size:13px;font-weight:700;color:#57534E}
+.form-group input,.form-group textarea,.form-group select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;outline:none;background:rgba(255,255,255,.8);color:var(--text);resize:vertical}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(217,119,87,.10)}
+.form-group textarea{min-height:140px;line-height:1.7;font-size:13px}
+.parse-row{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:8px}
+.parse-hint{font-size:12px;color:var(--muted);line-height:1.5}
+.parse-mini-btn{border:1px solid rgba(217,119,87,.22);background:rgba(217,119,87,.08);color:var(--accent);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.parse-mini-btn:hover{background:rgba(217,119,87,.14)}
+.jd-parse-preview{display:none;margin-top:12px;padding:14px;border-radius:16px;background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.12)}
+.jd-parse-preview.warn{background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2)}
+.jd-parse-preview.err{background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.18)}
+.jd-parse-preview h5{font-size:13px;margin-bottom:10px;color:var(--text)}
+.parsed-summary{font-size:13px;line-height:1.7;color:var(--muted)}
+.parsed-summary b{color:var(--text)}
+.parsed-summary ul{margin:8px 0 0 18px;padding:0}
+.parsed-summary li{margin:3px 0}
+.parsed-banner{display:flex;align-items:flex-start;gap:8px;padding:10px 14px;border-radius:10px;margin-bottom:10px;font-size:13px;font-weight:600}
+.parsed-banner.ok{background:rgba(22,163,74,.08);color:#15803d}
+.parsed-banner.warn{background:rgba(245,158,11,.1);color:#92400e}
+.parsed-banner.err{background:rgba(220,38,38,.08);color:#b91c1c}
+.parsed-banner .icon{font-size:16px;flex-shrink:0}
+.skill-tags{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.8);min-height:44px;cursor:text}
+.skill-tags:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(217,119,87,.10)}
+.skill-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600}
+.skill-tag.must{background:rgba(217,119,87,.12);color:var(--accent)}
+.skill-tag.bonus{background:rgba(202,138,4,.12);color:#854D0E}
+.skill-tag .remove{cursor:pointer;font-size:14px;opacity:.6;margin-left:2px}
+.skill-tag .remove:hover{opacity:1}
+.skill-tags input{border:none;outline:none;background:transparent;font:inherit;font-size:13px;flex:1;min-width:80px;padding:2px}
+.side-field{padding:12px;border-radius:16px;background:rgba(255,255,255,.6);border:1px solid var(--line)}
+.side-field .sf-label{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.04em}
+.side-field .sf-value{margin-top:4px;font-size:14px;font-weight:600}
+
+/* Upload Page Enhanced */
+.upload-job-select{margin-bottom:18px;padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.72);border:1px solid var(--line)}
+.upload-job-select label{font-size:13px;font-weight:700;color:#57534E;display:block;margin-bottom:8px}
+.upload-job-select select{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.9);font:inherit;font-size:14px;outline:none;cursor:pointer}
+.upload-job-select select:focus{border-color:var(--accent)}
+.upload-job-select .hint{font-size:12px;color:var(--muted);margin-top:6px}
+.upload-file-list{margin-top:16px}
+.upload-file-item{display:grid;grid-template-columns:auto 1fr auto auto;gap:12px;align-items:center;padding:12px 14px;background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:16px;margin-bottom:8px}
+.upload-file-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(145deg,#FFF0EB,#fff);display:grid;place-items:center;font-size:16px}
+.upload-file-info{font-size:13px}
+.upload-file-info strong{display:block;margin-bottom:2px}
+.upload-file-info span{color:var(--muted);font-size:12px}
+.upload-file-status{font-size:11px;padding:4px 8px;border-radius:999px;background:rgba(22,163,74,.1);color:var(--good);font-weight:600}
+
+/* Upload Steps Layout */
+.upload-step{margin-bottom:14px}
+.step-label{font-size:13px;font-weight:700;color:#57534E;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.step-label .required{font-size:11px;color:var(--danger);font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.18)}
+.job-select-card{padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.72);border:1px solid var(--line)}
+.job-select-row{display:flex;gap:10px;align-items:center}
+.job-select{flex:1;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.9);font:inherit;font-size:14px;outline:none;cursor:pointer}
+.job-select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(217,119,87,.10)}
+.analysis-launch{padding:12px 16px;border-radius:20px;background:rgba(255,255,255,.72);border:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.launch-summary{display:flex;gap:14px;flex-wrap:wrap}
+.ls-item{display:flex;flex-direction:column;gap:1px}
+.ls-item .ls-k{font-size:10px;color:var(--muted);text-transform:uppercase;font-weight:700}
+.ls-item .ls-v{font-size:13px;font-weight:700;color:var(--text)}
+
+/* Responsive */
+@media(max-width:1100px){.app{grid-template-columns:1fr}.sidebar{display:none}.dash-hero,.dash-grid,.settings-grid{grid-template-columns:1fr}.decision-panel{grid-template-columns:1fr}.top-cards{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark"></div>
+      <div><h1>F1 智能筛选</h1><small>招聘简历筛选工具</small></div>
+    </div>
+    <nav class="nav">
+      <button class="active" onclick="showPage('dashboard')"><span class="ic">📊</span> 工作台</button>
+      <button onclick="showPage('jobs')"><span class="ic">📋</span> 职位管理</button>
+      <button onclick="showPage('upload')"><span class="ic">📄</span> 简历上传</button>
+      <button onclick="showPage('results')"><span class="ic">🎯</span> 筛选结果</button>
+      <button onclick="showPage('settings')"><span class="ic">⚙️</span> 系统设置</button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="t">智能筛选助手</div>
+      <div class="x">上传简历后，系统会生成候选人匹配结果、证据摘要与复核建议。</div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="topbar">
+      <div class="crumb" id="breadcrumb">工作台</div>
+    </div>
+    <div class="content">
+
+      <!-- ========== Dashboard ========== -->
+      <section class="page active" id="pg-dashboard">
+        <div class="dash-hero">
+          <div class="card hero-card">
+            <div class="pill">✦ F1 智能筛选</div>
+            <h2>职位要求 × 候选人简历<br/><em>智能匹配分析</em></h2>
+            <p>基于岗位要求和候选人简历，自动生成匹配结果、证据摘要和复核建议。HR 只需上传简历，即可快速查看候选人是否适合进入下一轮。</p>
+            <div style="margin-top:18px;display:flex;gap:10px">
+              <button class="btn primary" onclick="showPage('upload')">开始筛选</button>
+              <button class="btn ghost" onclick="showPage('jobs')">配置职位</button>
+            </div>
+          </div>
+          <div class="stat-grid">
+            <div class="card stat-card"><div class="k">简历总数</div><div class="v" id="dashResumeCount">—</div><div class="l" id="dashResumeDetail">上传至系统的简历</div></div>
+            <div class="card stat-card"><div class="k">活跃职位</div><div class="v" id="dashActiveJobs">0</div><div class="l" id="dashActiveJobName">暂无岗位</div></div>
+            <div class="card stat-card"><div class="k">平均匹配度</div><div class="v" id="dashAvgScore">—</div><div class="l" id="dashScoreDetail">暂无筛选结果</div></div>
+          </div>
+        </div>
+        <div class="dash-grid">
+          <div class="card">
+            <h4>最近活动</h4>
+            <div id="recentActivityList"></div>
+          </div>
+          <div class="card">
+            <h4>筛选结果包含</h4>
+            <div>
+              <div class="result-feature"><div class="feature-dot"></div><div class="feature-text">候选人与岗位要求的匹配结论</div></div>
+              <div class="result-feature"><div class="feature-dot"></div><div class="feature-text">每项要求对应的证据摘要</div></div>
+              <div class="result-feature"><div class="feature-dot"></div><div class="feature-text">需要 HR 重点复核的风险点</div></div>
+              <div class="result-feature"><div class="feature-dot"></div><div class="feature-text">推进、暂缓或淘汰的操作建议</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Jobs ========== -->
+      <section class="page" id="pg-jobs">
+        <div class="section-head"><h3>职位管理</h3><span>配置岗位要求，系统将据此进行匹配分析</span></div>
+        <!-- Toolbar: Search + New Button -->
+        <div class="jobs-toolbar">
+          <input class="jobs-search" type="text" placeholder="搜索岗位名称、部门、关键词..." />
+          <button class="btn primary" onclick="openJobModal()">+ 新建岗位</button>
+        </div>
+        <!-- Status Filter Tabs -->
+        <div class="jobs-tabs">
+          <span class="tab active" onclick="filterJobs(this,'all')">全部 <b id="jobTabAll">(0)</b></span>
+          <span class="tab" onclick="filterJobs(this,'active')">招聘中 <b id="jobTabActive">(0)</b></span>
+          <span class="tab" onclick="filterJobs(this,'draft')">草稿 <b id="jobTabDraft">(0)</b></span>
+          <span class="tab" onclick="filterJobs(this,'closed')">已关闭 <b id="jobTabClosed">(0)</b></span>
+        </div>
+        <!-- Job List -->
+        <div class="job-list" id="jobList"></div>
+        <!-- Job Detail (inline expand) -->
+        <div id="jobDetail" style="display:none;margin-top:18px">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <h4 id="jobDetailTitle">岗位要求详情</h4>
+              <div style="display:flex;gap:8px">
+                <button class="btn ghost" id="jobDetailEditBtn" onclick="">编辑岗位</button>
+                <button class="btn ghost" onclick="document.getElementById('jobDetail').style.display='none'">收起</button>
+              </div>
+            </div>
+            <div class="req-list" id="reqList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Job Create/Edit Modal ===== -->
+      <div class="modal-overlay" id="jobModal">
+        <div class="modal" style="max-width:900px">
+          <span class="modal-close" onclick="closeJobModal()">×</span>
+          <h3 id="jobModalTitle">新建岗位</h3>
+          <div class="job-form">
+            <div class="job-form-main">
+              <div class="form-group">
+                <label>岗位名称</label>
+                <input type="text" id="jf-name" placeholder="请输入岗位名称" value="" />
+              </div>
+              <div class="form-group">
+                <label>JD 原文 <span style="font-weight:400;color:var(--muted)">（粘贴完整职位描述，系统将整理为筛选要求）</span></label>
+                <textarea id="jf-jd" placeholder="粘贴职位描述原文，点击“智能解析 JD”后自动填充下方字段..."></textarea>
+                <div class="parse-row"><span class="parse-hint">粘贴后自动整理字段</span><button class="parse-mini-btn" type="button" onclick="parseJD()">一键解析</button></div>
+                <div class="jd-parse-preview" id="jdParsePreview">
+                  <h5>解析摘要</h5>
+                  <div class="parsed-summary" id="parsedReqList"></div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>必备技能 <span style="font-weight:400;color:var(--muted)">（必须条件，输入后按回车添加）</span></label>
+                <div class="skill-tags" id="mustSkillTags" onclick="this.querySelector('input').focus()">
+                  <input type="text" placeholder="输入技能按回车添加..." onkeydown="addSkillTag(event,'must')" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>加分技能 <span style="font-weight:400;color:var(--muted)">（加分条件）</span></label>
+                <div class="skill-tags" id="bonusSkillTags" onclick="this.querySelector('input').focus()">
+                  <input type="text" placeholder="输入技能按回车添加..." onkeydown="addSkillTag(event,'bonus')" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>团队背景 / 招聘上下文 <span style="font-weight:400;color:var(--muted)">（用于补充岗位语境）</span></label>
+                <textarea id="jf-context" style="min-height:80px" placeholder="可选。若 JD 中包含团队背景，系统会自动整理到这里。"></textarea>
+              </div>
+            </div>
+            <div class="job-form-side">
+              <div class="side-field">
+                <div class="sf-label">状态</div>
+                <div class="sf-value"><select id="jf-status" style="border:none;background:transparent;font:inherit;font-weight:600;width:100%"><option>招聘中</option><option>草稿</option><option>已关闭</option></select></div>
+              </div>
+              <div class="side-field">
+                <div class="sf-label">部门</div>
+                <div class="sf-value"><input id="jf-dept" type="text" placeholder="待解析" value="" style="border:none;background:transparent;font:inherit;font-weight:600;width:100%;padding:0" /></div>
+              </div>
+              <div class="side-field">
+                <div class="sf-label">工作地点</div>
+                <div class="sf-value"><input id="jf-location" type="text" placeholder="待解析" value="" style="border:none;background:transparent;font:inherit;font-weight:600;width:100%;padding:0" /></div>
+              </div>
+              <div class="side-field">
+                <div class="sf-label">薪资范围</div>
+                <div class="sf-value"><input id="jf-salary" type="text" placeholder="待解析" value="" style="border:none;background:transparent;font:inherit;font-weight:600;width:100%;padding:0" /></div>
+              </div>
+              <div class="side-field">
+                <div class="sf-label">经验要求</div>
+                <div class="sf-value"><input id="jf-exp" type="text" placeholder="待解析" value="" style="border:none;background:transparent;font:inherit;font-weight:600;width:100%;padding:0" /></div>
+              </div>
+              <div class="side-field">
+                <div class="sf-label">学历要求</div>
+                <div class="sf-value"><select id="jf-edu" style="border:none;background:transparent;font:inherit;font-weight:600;width:100%"><option value="">待解析</option><option>本科及以上</option><option>硕士及以上</option><option>不限</option></select></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--line)">
+            <button class="btn ghost" onclick="closeJobModal()">取消</button>
+            <button class="btn primary" onclick="saveJob()">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========== Upload (简历管理) ========== -->
+      <section class="page" id="pg-upload">
+        <div class="section-head"><h3>简历管理</h3><span>上传候选人简历并关联目标职位，系统将按对应 JD 进行匹配</span></div>
+
+        <!-- Step 1: 关联岗位（必选） -->
+        <div class="upload-step">
+          <div class="step-label">① 选择关联岗位与 JD <span class="required">必选</span></div>
+          <div class="job-select-card">
+            <div class="job-select-row">
+              <select id="targetJobSelect" class="job-select" onchange="updateSelectedJob()">
+                <option value="">— 请先在职位管理中新建岗位 —</option>
+              </select>
+              <button class="btn ghost" onclick="showPage('jobs');openJobModal()" style="white-space:nowrap">+ 新建岗位</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: 上传简历 -->
+        <div class="upload-step">
+          <div class="step-label">② 上传候选人简历</div>
+          <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+            <div>
+              <h4>拖拽简历到这里 / 点击选择</h4>
+              <p>支持 PDF / DOCX / DOC 格式，单文件最大 10MB，可批量上传</p>
+              <div style="margin-top:12px;display:flex;gap:10px">
+                
+                <button class="btn ghost" onclick="event.stopPropagation();document.getElementById('fileInput').click()">选择文件</button>
+              </div>
+            </div>
+          </div>
+          <input type="file" id="fileInput" multiple accept=".pdf,.docx,.doc" style="display:none" />
+          <div class="file-grid" id="fileGrid"></div>
+        </div>
+
+        <!-- Step 3: 解析简历 -->
+        <div class="upload-step">
+          <div class="step-label">③ 解析简历 <span id="parseStatus" style="font-size:12px;font-weight:400;color:var(--muted)"></span></div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <button class="btn primary" id="parseResumesBtn" onclick="parseResumes()" style="padding:12px 22px;font-size:14px">解析全部简历</button>
+            <span style="font-size:12px;color:var(--muted)">提取基本信息、学历、技能、工作经历</span>
+          </div>
+          <div id="parseProgressBar" style="display:none;margin-top:12px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <div style="flex:1;background:var(--line);border-radius:99px;height:6px;overflow:hidden">
+                <div id="parseProgressFill" style="background:var(--accent);height:100%;width:0%;border-radius:99px;transition:width .3s"></div>
+              </div>
+              <span id="parseProgressLabel" style="font-size:12px;font-weight:700;color:var(--accent);white-space:nowrap">0/0</span>
+            </div>
+            <div id="parseFileStatuses" style="font-size:12px;color:var(--muted);line-height:1.8"></div>
+          </div>
+          <div id="parsedResumes" style="margin-top:14px"></div>
+        </div>
+
+        <!-- Step 4: 开始匹配筛选 -->
+        <div class="upload-step" id="stepScreening" style="display:none">
+          <div class="step-label">④ 开始匹配筛选</div>
+          <div class="analysis-launch">
+            <div class="launch-summary">
+              <div class="ls-item"><span class="ls-k">关联岗位</span><span class="ls-v" id="launchJob">未选择</span></div>
+              <div class="ls-item"><span class="ls-k">已解析简历</span><span class="ls-v" id="launchCount">0 份</span></div>
+              <div class="ls-item"><span class="ls-k">分析内容</span><span class="ls-v">语义匹配 + 风险评估 + 推荐</span></div>
+              <div class="ls-item"><span class="ls-k">预估耗时</span><span class="ls-v" id="launchTime">~30秒/份</span></div>
+            </div>
+            <button class="btn primary" id="startScreeningBtn" onclick="startScreening()" style="padding:9px 18px;font-size:13px">开始匹配筛选</button>
+            <button class="btn primary" id="startAgentBtn" onclick="startAgentFlow()" style="padding:9px 18px;font-size:13px;background:var(--accent);margin-left:8px">Agent 智能分析</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========== Progress (step-by-step) ========== -->
+      <section class="page" id="pg-progress">
+        <div class="progress-wrap">
+          <div class="progress-bar-wrap">
+            <span style="font-size:14px;font-weight:700">筛选进度</span>
+            <div class="progress-bar-outer"><div class="progress-bar-inner" id="progressBarFill"></div></div>
+            <span style="font-size:13px;font-weight:700;color:var(--muted)" id="progressLabel">0/0</span>
+          </div>
+          <div id="progressCards"></div>
+          <button class="btn primary review-entry-btn" id="btnEnterReview" style="display:none">全部处理完成，进入 HR 复核 →</button>
+          <button class="btn primary review-entry-btn" id="btnGoResults" style="display:none;background:var(--good)" onclick="goToFinalResults()">查看最终结果 →</button>
+        </div>
+      </section>
+
+      <!-- ========== Results ========== -->
+      <section class="page" id="pg-results">
+        <!-- Header bar -->
+        <div class="results-header">
+          <div>
+            <h3>筛选结果</h3>
+            <span style="font-size:13px;color:var(--muted)">尚未生成结果 · 请上传真实简历后开始筛选</span>
+          </div>
+          <div class="results-actions">
+            <button class="btn ghost" onclick="alert('已导出CSV')">导出 CSV</button>
+            <button class="btn ghost" onclick="alert('已导出Excel')">导出 Excel</button>
+            <button class="btn ghost" onclick="showPage('upload')">重新匹配</button>
+            <button class="btn primary" onclick="showPage('upload')">继续筛选</button>
+          </div>
+        </div>
+        <!-- Compare bar -->
+        <div class="compare-bar" id="compareBar">
+          <span class="compare-count">已选 <strong id="compareCount">0</strong> 人</span>
+          <button class="btn primary" id="compareBtn" onclick="startCompare()">开始对比</button>
+          <span style="font-size:12px;color:var(--muted)">勾选 2-3 人后可横向对比各维度得分</span>
+        </div>
+        <!-- Candidate rows (rendered by JS) -->
+        <div class="candidate-list" id="candidateList"></div>
+      </section>
+
+      <!-- ========== Detail ========== -->
+      <section class="page" id="pg-detail">
+        <div class="detail-header">
+          <h3 id="detailName">候选人详情</h3>
+          <button class="back-btn" onclick="showPage('results')">← 返回列表</button>
+        </div>
+        <div class="decision-panel" id="decisionPanel"></div>
+        <div class="section-head" style="margin-top:4px"><h4>逐项匹配分析</h4><span>点击展开查看证据详情 · 默认折叠</span></div>
+        <div class="match-list" id="matchList"></div>
+        <div class="review-section" id="reviewSection">
+          <h4>需要 HR 确认的问题</h4>
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Agent 已完成自动复查。以下是不确定项，请 HR 确认后再做最终处理。</p>
+          <div class="review-questions" id="reviewQuestions"></div>
+          <div class="agent-update" id="agentUpdateNotice"></div>
+          <div class="review-actions">
+            <button class="btn primary" onclick="handleReview(currentDetailCandidateId,'approve')">✓ 确认推进</button>
+            <button class="btn ghost" onclick="handleReview(currentDetailCandidateId,'hold')">⏸ 暂缓</button>
+            <button class="btn ghost" style="color:var(--danger)" onclick="handleReview(currentDetailCandidateId,'reject')">✗ 淘汰</button>
+          </div>
+          <div class="review-result" id="detailReviewResult"></div>
+        </div>
+
+        <!-- HR 审计日志 -->
+        <div class="review-section" id="auditSection" style="display:none;margin-top:18px">
+          <h4>HR 复核审计记录</h4>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:10px">每次逐项修改或整体决策都会记录操作人、时间和原因，确保可追溯。</p>
+          <div id="auditLog"><p style="font-size:12px;color:var(--muted)">暂无复核记录</p></div>
+        </div>
+      </section>
+
+      <!-- ========== Settings ========== -->
+      <section class="page" id="pg-settings">
+        <div class="section-head"><h3>系统设置</h3><span>配置筛选偏好、复核规则和导出方式</span></div>
+        <div class="settings-grid">
+          <div class="setting-card">
+            <h4>筛选偏好</h4>
+            <div class="setting-row"><span class="label">默认排序</span><span class="value">综合匹配度</span></div>
+            <div class="setting-row"><span class="label">低匹配提醒</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="setting-row"><span class="label">显示证据摘要</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="setting-row"><span class="label">默认展示人数</span><span class="value">20 人</span></div>
+          </div>
+          <div class="setting-card">
+            <h4>复核规则</h4>
+            <div class="setting-row"><span class="label">低置信结果</span><span class="value">需要复核</span></div>
+            <div class="setting-row"><span class="label">信息不足结果</span><span class="value">需要复核</span></div>
+            <div class="setting-row"><span class="label">最终推进</span><span class="value">HR 手动确认</span></div>
+            <div class="setting-row"><span class="label">复核记录</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          </div>
+          <div class="setting-card">
+            <h4>岗位要求展示</h4>
+            <div class="setting-row"><span class="label">必须项标记</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="setting-row"><span class="label">加分项标记</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="setting-row"><span class="label">风险提示</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+            <div class="setting-row"><span class="label">证据原文</span><span class="value">默认展开</span></div>
+          </div>
+          <div class="setting-card">
+            <h4>文件与导出</h4>
+            <div class="setting-row"><span class="label">支持格式</span><span class="value">PDF / DOCX / DOC</span></div>
+            <div class="setting-row"><span class="label">最大文件大小</span><span class="value">10 MB</span></div>
+            <div class="setting-row"><span class="label">导出格式</span><span class="value">CSV / Excel</span></div>
+            <div class="setting-row"><span class="label">导出复核记录</span><div class="toggle on" onclick="this.classList.toggle('on')"></div></div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- Compare Modal -->
+<div class="compare-modal" id="compareModal" onclick="if(event.target===this)closeCompare()">
+  <div class="compare-modal-inner">
+    <div class="compare-modal-header">
+      <div>
+        <h3>候选人对比</h3>
+        <div class="sub">最多 3 位候选人，横向比较分数、匹配点、风险和下一轮建议。</div>
+      </div>
+      <button class="compare-close" onclick="closeCompare()">✕</button>
+    </div>
+    <div class="compare-body" id="compareBody"></div>
+  </div>
+</div>
+
+<!-- HR 复核弹窗（逐项修改结论，记录审计信息并局部重算） -->
+<div class="modal-overlay" id="hrOverrideModal">
+  <div class="modal" style="max-width:480px;border-radius:14px;padding:20px 24px">
+    <span class="modal-close" onclick="closeHROverride()">×</span>
+    <h3 style="margin:0 0 4px">人工复核</h3>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 12px">修改后将记录操作人、时间和原因，并局部重算风险与推荐</p>
+    <input type="hidden" id="hrCandidateId"/>
+    <input type="hidden" id="hrReqId"/>
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;font-weight:700">当前要求</label>
+      <div id="hrReqDisplay" style="font-size:13px;padding:4px 0"></div>
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;font-weight:700">当前结论 / 证据来源</label>
+      <div id="hrCurrentStatus" style="font-size:12px;padding:4px 0"></div>
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;font-weight:700">操作人 <span style="color:var(--danger)">*</span></label>
+      <input id="hrOperator" type="text" placeholder="HR姓名或工号" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px;outline:none" />
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;font-weight:700">修改后结论 <span style="color:var(--danger)">*</span></label>
+      <select id="hrNewStatus" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px;outline:none;background:white">
+        <option value="satisfied">满足 (satisfied)</option>
+        <option value="not_satisfied">不满足 (not_satisfied)</option>
+        <option value="cannot_judge">无法判断 (cannot_judge)</option>
+      </select>
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;font-weight:700">修改原因 <span style="color:var(--danger)">*</span></label>
+      <textarea id="hrReason" placeholder="说明为什么修改此结论…（如：电话核实补充了项目经历、面试确认了技能水平等）" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px;resize:vertical;height:60px;outline:none"></textarea>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:11px;font-weight:700">补充证据（可选）</label>
+      <textarea id="hrEvidence" placeholder="如电话核实、面试反馈、HR提前沟通等补充信息…" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:13px;resize:vertical;height:50px;outline:none"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn ghost" onclick="closeHROverride()">取消</button>
+      <button class="btn primary" onclick="submitHROverride()">确认修改并局部重算</button>
+    </div>
+    <div id="hrOverrideResult" style="margin-top:8px;font-size:11px;display:none"></div>
+  </div>
+</div>
+
+<script>
+// ===== Runtime Data =====
+const JOBS = [];
+const JOB_REQUIREMENTS = [];
+let CURRENT_PARSED_REQUIREMENTS = [];
+
+// ── 评分与推荐引擎（硬规则，匹配度/置信度/证据来源三维独立）──
+
+const IMPORTANCE_WEIGHT = {high:3, medium:2, low:1};
+const CONFIDENCE_THRESHOLD = {high:0.8, low:0.5};  // >=0.8高, <0.5低(强制复核)
+
+/** 计算加权匹配分（要求状态 × 要求权重，置信度不参与） */
+function computeScore(matchItems) {
+  let totalW = 0, satisfiedW = 0;
+  matchItems.forEach(m => {
+    const req = JOB_REQUIREMENTS.find(r => r.id === m.reqId);
+    if (!req) return;
+    let w = (IMPORTANCE_WEIGHT[req.importance] || 2);
+    if (req.type === 'must') w *= 2;
+    totalW += w;
+    if (m.status === 'satisfied') satisfiedW += w;
+  });
+  return totalW > 0 ? Math.round((satisfiedW / totalW) * 100) : 0;
+}
+
+/** 硬规则推荐（必须项不满足→不推荐；必须项无法判断→人工复核） */
+function computeRecommendation(matchItems) {
+  const mustItems = matchItems.filter(m => {
+    const req = JOB_REQUIREMENTS.find(r => r.id === m.reqId);
+    return req && req.type === 'must';
+  });
+  if (mustItems.some(m => m.status === 'not_satisfied')) {
+    return {text:'暂不推荐', cls:'rec-bad', reason:'存在必须项不满足'};
+  }
+  if (mustItems.some(m => m.status === 'cannot_judge')) {
+    return {text:'需人工复核', cls:'rec-review', reason:'存在必须项无法判断'};
+  }
+  const score = computeScore(matchItems);
+  if (score >= 70) return {text:'建议进入下一轮', cls:'rec-good', reason:'必须项全部满足，匹配度较高'};
+  if (score >= 45) return {text:'可考虑', cls:'rec-review', reason:'匹配度中等，建议HR评估'};
+  return {text:'暂不推荐', cls:'rec-bad', reason:'匹配度偏低'};
+}
+
+/** 平均置信度（只用于判断是否需要人工复核，不参与匹配分） */
+function avgConfidence(matchItems) {
+  if (matchItems.length === 0) return 0;
+  return matchItems.reduce((s,m) => s + (m.confidence||0), 0) / matchItems.length;
+}
+
+/** 证据来源中文标签 */
+const EVIDENCE_SOURCE_LABEL = {
+  resume_evidence:       '📋 简历原文',
+  hr_verified_evidence:  '👤 HR确认补充',
+  system_inference:      '🤖 模型推断',
+};
+
+const CANDIDATES = [];
+
+// ===== Page Navigation =====
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  var pg = document.getElementById('pg-' + pageId);
+  if (!pg) return;
+  pg.classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  const names = {dashboard:'工作台',jobs:'职位管理',upload:'简历上传',results:'筛选结果',detail:'候选人详情',settings:'系统设置',loading:'分析中...',progress:'筛选进度',review:'HR复核'};
+  document.getElementById('breadcrumb').textContent = names[pageId] || pageId;
+  const idx = ['dashboard','jobs','upload','results','settings'].indexOf(pageId);
+  if(idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('active');
+  if(pageId === 'dashboard') { loadJobs(); refreshDashboard(); }
+  if(pageId === 'jobs') { loadJobs(); }
+  if(pageId === 'results') {
+    // Refresh CANDIDATES from screenState if overrides have been made
+    if(screenState.candidates && screenState.candidates.length) {
+      var doneCands = screenState.candidates.filter(function(c) { return c.status === 'done' || c.status === 'paused'; });
+      if(doneCands.length) {
+        CANDIDATES.splice(0, CANDIDATES.length, ...doneCands.map(mapScreenCandidate));
+      }
+    }
+    renderResults();
+  }
+}
+
+// ===== Jobs Page =====
+function showJobDetail(jobId) {
+  const job = JOBS.find(j => j.id === jobId);
+  if(!job) return;
+  const el = document.getElementById('jobDetail');
+  el.style.display = 'block';
+  document.getElementById('jobDetailTitle').textContent = job.name + ' — 要求详情';
+  document.getElementById('jobDetailEditBtn').onclick = function(){ openJobModal(jobId); };
+  renderReqList(job.requirements || []);
+}
+function getJobName(jobId) {
+  const job = JOBS.find(j => j.id === jobId);
+  return job ? job.name : '职位';
+}
+function renderReqList(reqs) {
+  const el = document.getElementById('reqList');
+  const list = Array.isArray(reqs) ? reqs : JOB_REQUIREMENTS;
+  if(list.length === 0) {
+    el.innerHTML = '<div class="req-item"><span style="color:var(--muted)">暂无岗位要求，请上传真实 JD 并完成解析</span><span></span><span></span></div>';
+    return;
+  }
+  el.innerHTML = list.map(r => `
+    <div class="req-item">
+      <span><strong>${r.name}</strong> — ${r.description}</span>
+      <span class="${r.type === 'must' ? 'tag-must' : 'tag-bonus'}">${r.type === 'must' ? '必须' : '加分'}</span>
+      <span style="font-size:12px;color:var(--muted)">${r.importance}</span>
+    </div>
+  `).join('');
+}
+function openJobModal(jobId) {
+  document.getElementById('jobModal').classList.add('show');
+  document.getElementById('jobModalTitle').textContent = jobId ? '编辑岗位' : '新建岗位';
+  resetJobForm();
+  document.getElementById('jobModal').dataset.jobId = jobId || '';
+  const job = JOBS.find(j => j.id === jobId);
+  if(job) {
+    document.getElementById('jf-name').value = job.name || '';
+    document.getElementById('jf-jd').value = job.jd || '';
+    document.getElementById('jf-context').value = job.context || '';
+    document.getElementById('jf-dept').value = job.department || '';
+    document.getElementById('jf-location').value = job.location || '';
+    document.getElementById('jf-salary').value = job.salary || '';
+    document.getElementById('jf-exp').value = job.experience || '';
+    document.getElementById('jf-edu').value = job.education || '';
+    document.getElementById('jf-status').value = job.status || '招聘中';
+    setSkillTags('mustSkillTags', job.mustSkills || [], 'must');
+    setSkillTags('bonusSkillTags', job.bonusSkills || [], 'bonus');
+    CURRENT_PARSED_REQUIREMENTS = Array.isArray(job.requirements) ? job.requirements : [];
+  }
+}
+function closeJobModal() {
+  document.getElementById('jobModal').classList.remove('show');
+}
+async function saveJob() {
+  const jd = document.getElementById('jf-jd').value.trim();
+  const name = document.getElementById('jf-name').value.trim();
+  if(!name) { alert('请填写岗位名称'); return; }
+  if(!jd) { alert('请粘贴 JD 原文'); return; }
+  const editingId = document.getElementById('jobModal').dataset.jobId;
+  const job = {
+    id: editingId || 'job-' + Date.now(),
+    name,
+    jd,
+    status: document.getElementById('jf-status').value || '招聘中',
+    department: document.getElementById('jf-dept').value.trim(),
+    location: document.getElementById('jf-location').value.trim(),
+    salary: document.getElementById('jf-salary').value.trim(),
+    experience: document.getElementById('jf-exp').value.trim(),
+    education: document.getElementById('jf-edu').value,
+    context: document.getElementById('jf-context').value.trim(),
+    mustSkills: getSkillTags('mustSkillTags'),
+    bonusSkills: getSkillTags('bonusSkillTags'),
+    requirements: buildRequirementsFromJobForm(),
+    createdAt: editingId ? (JOBS.find(j => j.id === editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+  };
+  try {
+    const response = await fetch(editingId ? '/api/jobs/' + encodeURIComponent(editingId) : '/api/jobs', {
+      method: editingId ? 'PUT' : 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(job)
+    });
+    const payload = await response.json();
+    if(!response.ok || !payload.success) throw new Error(payload.message || '保存岗位失败');
+    const savedJob = payload.data;
+    const idx = JOBS.findIndex(j => j.id === savedJob.id);
+    if(idx >= 0) JOBS.splice(idx, 1, savedJob); else JOBS.unshift(savedJob);
+    job.id = savedJob.id;
+  } catch (err) {
+    alert('保存失败：' + (err.message || err));
+    return;
+  }
+  renderJobs();
+  syncJobSelect(job.id);
+  document.getElementById('launchJob').textContent = name;
+  addRecentActivity('<b>' + escHtml(name) + '</b> 岗位已创建，等待上传简历筛选');
+  alert('已保存，岗位和 JD 已同步到简历上传页。');
+  closeJobModal();
+}
+function resetJobForm() {
+  CURRENT_PARSED_REQUIREMENTS = [];
+  document.getElementById('jf-name').value = '';
+  document.getElementById('jf-jd').value = '';
+  document.getElementById('jf-context').value = '';
+  document.getElementById('jf-dept').value = '';
+  document.getElementById('jf-location').value = '';
+  document.getElementById('jf-salary').value = '';
+  document.getElementById('jf-exp').value = '';
+  document.getElementById('jf-edu').value = '';
+  setSkillTags('mustSkillTags', [], 'must');
+  setSkillTags('bonusSkillTags', [], 'bonus');
+  const preview = document.getElementById('jdParsePreview');
+  if(preview) preview.style.display = 'none';
+  const list = document.getElementById('parsedReqList');
+  if(list) list.innerHTML = '';
+}
+function setSkillTags(containerId, skills, type) {
+  const box = document.getElementById(containerId);
+  const input = box.querySelector('input');
+  box.querySelectorAll('.skill-tag').forEach(tag => tag.remove());
+  skills.forEach(skill => {
+    const tag = document.createElement('span');
+    tag.className = 'skill-tag ' + type;
+    tag.innerHTML = skill + ' <span class="remove" onclick="event.stopPropagation();this.parentElement.remove()">×</span>';
+    box.insertBefore(tag, input);
+  });
+}
+function getSkillTags(containerId) {
+  return Array.from(document.querySelectorAll('#' + containerId + ' .skill-tag')).map(tag => tag.childNodes[0].textContent.trim()).filter(Boolean);
+}
+function buildRequirementsFromJobForm() {
+  if(CURRENT_PARSED_REQUIREMENTS.length) return CURRENT_PARSED_REQUIREMENTS;
+  const must = getSkillTags('mustSkillTags').map((skill, i) => ({
+    id: 'req-' + String(i + 1).padStart(3, '0'),
+    name: skill,
+    description: skill,
+    type: 'must',
+    importance: i < 3 ? 'high' : 'medium',
+    keywords: [skill]
+  }));
+  const bonus = getSkillTags('bonusSkillTags').map((skill, i) => ({
+    id: 'req-' + String(must.length + i + 1).padStart(3, '0'),
+    name: skill,
+    description: skill,
+    type: 'bonus',
+    importance: 'low',
+    keywords: [skill]
+  }));
+  return must.concat(bonus);
+}
+function renderJobs(filterStatus) {
+  const listEl = document.getElementById('jobList');
+  const visibleJobs = filterStatus && filterStatus !== 'all'
+    ? JOBS.filter(j => statusToClass(j.status) === filterStatus)
+    : JOBS;
+  if(visibleJobs.length === 0) {
+    listEl.innerHTML = `
+      <div class="card" style="text-align:center;padding:42px 24px">
+        <h4 style="font-size:18px;margin-bottom:8px">暂无岗位</h4>
+        <p style="color:var(--muted);font-size:13px;line-height:1.7">点击右上角“新建岗位”，粘贴真实 JD 后保存。</p>
+        <button class="btn primary" style="margin-top:16px" onclick="openJobModal()">新建岗位</button>
+      </div>`;
+  } else {
+    listEl.innerHTML = visibleJobs.map(job => `
+      <div class="job-item" onclick="showJobDetail('${job.id}')" data-status="${statusToClass(job.status)}">
+        <div class="job-info">
+          <h4>${escHtml(job.name)} <span class="job-status ${statusToClass(job.status)}">${escHtml(job.status)}</span></h4>
+          <p>${escHtml(job.department || '未填写部门')} · ${(job.requirements || []).length}项岗位要求 · 创建于 ${new Date(job.createdAt).toLocaleDateString('zh-CN')}</p>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center">
+          <div class="job-meta">
+            <div class="count">${job.resumeCount || 0}</div>
+            <div class="label">已上传</div>
+          </div>
+          <div class="job-meta">
+            <div class="count">${job.screenedCount || 0}</div>
+            <div class="label">已筛选</div>
+          </div>
+          <div class="job-actions">
+            <button onclick="event.stopPropagation();openJobModal('${job.id}')">编辑</button>
+            <button onclick="event.stopPropagation();deleteJob('${job.id}')" style="color:var(--danger)">删除</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+  updateJobCounts();
+}
+function statusToClass(status) {
+  if(status === '草稿') return 'draft';
+  if(status === '已关闭') return 'closed';
+  return 'active';
+}
+function updateJobCounts() {
+  document.getElementById('jobTabAll').textContent = '(' + JOBS.length + ')';
+  document.getElementById('jobTabActive').textContent = '(' + JOBS.filter(j => statusToClass(j.status) === 'active').length + ')';
+  document.getElementById('jobTabDraft').textContent = '(' + JOBS.filter(j => statusToClass(j.status) === 'draft').length + ')';
+  document.getElementById('jobTabClosed').textContent = '(' + JOBS.filter(j => statusToClass(j.status) === 'closed').length + ')';
+  document.getElementById('dashActiveJobs').textContent = JOBS.filter(j => statusToClass(j.status) === 'active').length;
+  document.getElementById('dashActiveJobName').textContent = JOBS[0] ? JOBS[0].name : '暂无岗位';
+}
+function syncJobSelect(selectedId) {
+  const sel = document.getElementById('targetJobSelect');
+  if(JOBS.length === 0) {
+    sel.innerHTML = '<option value="">— 请先在职位管理中新建岗位 —</option>';
+    updateSelectedJob();
+    return;
+  }
+  sel.innerHTML = '<option value="">— 请选择目标职位 —</option>' + JOBS.map(job => `<option value="${job.id}">${escHtml(job.name)}</option>`).join('');
+  if(selectedId) sel.value = selectedId;
+  updateSelectedJob();
+}
+async function deleteJob(jobId) {
+  const idx = JOBS.findIndex(j => j.id === jobId);
+  if(idx < 0) return;
+  const name = JOBS[idx].name;
+  try {
+    const response = await fetch('/api/jobs/' + encodeURIComponent(jobId), { method: 'DELETE' });
+    const payload = await response.json();
+    if(!response.ok || !payload.success) throw new Error(payload.message || '删除岗位失败');
+  } catch (err) {
+    alert('删除失败：' + (err.message || err));
+    return;
+  }
+  JOBS.splice(idx, 1);
+  document.getElementById('jobDetail').style.display = 'none';
+  renderJobs();
+  syncJobSelect();
+  addRecentActivity('<b>' + escHtml(name) + '</b> 岗位已删除');
+}
+async function loadJobs() {
+  try {
+    const response = await fetch('/api/jobs');
+    const payload = await response.json();
+    if(!response.ok || !payload.success) throw new Error(payload.message || '读取岗位失败');
+    JOBS.splice(0, JOBS.length, ...(payload.data || []));
+  } catch (err) {
+    console.error(err);
+    alert('读取岗位失败：' + (err.message || err));
+  }
+  renderJobs();
+  syncJobSelect();
+}
+async function parseJD() {
+  var jd = document.getElementById('jf-jd').value.trim();
+  if(!jd) {
+    alert('请先粘贴 JD 原文');
+    return;
+  }
+
+  var preview = document.getElementById('jdParsePreview');
+  var reqList = document.getElementById('parsedReqList');
+  var parseBtn = document.querySelector('.parse-mini-btn');
+  preview.className = 'jd-parse-preview';
+  preview.style.display = 'block';
+  reqList.innerHTML = '<div class="parsed-banner warn"><span class="icon">…</span> 正在解析 JD，请耐心等待...</div>';
+  if(parseBtn) {
+    parseBtn.disabled = true;
+    parseBtn.textContent = '解析中，请稍候...';
+  }
+
+  try {
+    var response = await fetch('/api/parse-jd', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({jd: jd})
+    });
+    var payload = await response.json();
+    if(!response.ok || !payload.success) throw new Error(payload.message || 'JDParser 解析失败');
+
+    var result = payload.data || {};
+    var requirements = Array.isArray(result.requirements) ? result.requirements : [];
+    CURRENT_PARSED_REQUIREMENTS = requirements.map(function(r, i) {
+      return {
+        id: r.id || 'req-' + String(i + 1).padStart(3, '0'),
+        name: r.name || '要求' + (i + 1),
+        description: r.description || '',
+        type: r.type || 'must',
+        importance: r.importance || 'medium',
+        keywords: r.keywords || []
+      };
+    });
+
+    if(CURRENT_PARSED_REQUIREMENTS.length === 0) {
+      preview.className = 'jd-parse-preview err';
+      reqList.innerHTML =
+        '<div class="parsed-banner err"><span class="icon">!</span> 后端 JDParser 未提取到岗位要求</div>' +
+        '<div class="parsed-summary"><p>' + escHtml(result.parsing_notes || '请确认输入是否为完整招聘 JD。') + '</p></div>';
+      setSkillTags('mustSkillTags', [], 'must');
+      setSkillTags('bonusSkillTags', [], 'bonus');
+      return;
+    }
+
+    fillJDMetaFromText(jd);
+    setSkillTags('mustSkillTags', CURRENT_PARSED_REQUIREMENTS.filter(r => r.type === 'must').map(r => r.name), 'must');
+    setSkillTags('bonusSkillTags', CURRENT_PARSED_REQUIREMENTS.filter(r => r.type === 'bonus').map(r => r.name), 'bonus');
+    reqList.innerHTML =
+      '<div class="parsed-banner ok"><span class="icon">✓</span> 后端 JDParser 解析成功 — 提取 ' + CURRENT_PARSED_REQUIREMENTS.length + ' 项要求</div>' +
+      '<div class="parsed-summary">' +
+      '<p>' + escHtml(result.parsing_notes || 'JD 信息已解析。') + '</p>' +
+      '<ul>' + CURRENT_PARSED_REQUIREMENTS.map(function(r) {
+        return '<li><b>' + escHtml(r.name) + '</b> <span class="' + (r.type === 'must' ? 'tag-must' : 'tag-bonus') + '">' + (r.type === 'must' ? '必须' : '加分') + '</span> ' + escHtml(r.description) + '</li>';
+      }).join('') + '</ul>' +
+      '</div>';
+  } catch (err) {
+    preview.className = 'jd-parse-preview err';
+    reqList.innerHTML =
+      '<div class="parsed-banner err"><span class="icon">!</span> 后端 JDParser 调用失败</div>' +
+      '<div class="parsed-summary"><p>' + escHtml(err.message || err) + '</p><p>请确认后端服务、API Key 和网络可用。</p></div>';
+  } finally {
+    if(parseBtn) {
+      parseBtn.disabled = false;
+      parseBtn.textContent = '一键解析';
+    }
+  }
+}
+
+// ── 辅助函数 ──
+
+function fillJDMetaFromText(jd) {
+  var firstLine = jd.split('\n').map(function(line){ return line.trim(); }).find(Boolean);
+  if(!document.getElementById('jf-name').value && firstLine && firstLine.length <= 40) {
+    document.getElementById('jf-name').value = firstLine;
+  }
+  var deptMatch = jd.match(/(产品类|技术类|研发类|设计类|运营类|市场类)/);
+  document.getElementById('jf-dept').value = deptMatch ? deptMatch[1] : '';
+  var locations = [];
+  ['北京市','北京','上海市','上海','深圳市','深圳','成都市','成都','广州市','广州','杭州市','杭州','南京市','南京','武汉市','武汉','远程'].forEach(function(city) {
+    if(jd.includes(city) && !locations.includes(city)) locations.push(city);
+  });
+  document.getElementById('jf-location').value = locations.join(' / ');
+  var salaryMatch = jd.match(/\d+\s*k\s*[-~～]\s*\d+\s*k/i);
+  document.getElementById('jf-salary').value = salaryMatch ? salaryMatch[0].replace(/\s/g,'') : '';
+  var expMatch = jd.match(/\d+\s*[-~～]\s*\d+\s*年|\d+\s*年(?:以上|\+)?|应届生|校园招聘|校招/);
+  document.getElementById('jf-exp').value = expMatch ? expMatch[0].replace(/\s/g,'') : '';
+  document.getElementById('jf-edu').value = jd.includes('硕士') ? '硕士及以上' : (jd.includes('本科') ? '本科及以上' : (jd.includes('不限') ? '不限' : ''));
+  document.getElementById('jf-context').value = '';
+}
+function addSkillTag(event, type) {
+  if(event.key !== 'Enter') return;
+  event.preventDefault();
+  const input = event.target;
+  const val = input.value.trim();
+  if(!val) return;
+  const tag = document.createElement('span');
+  tag.className = 'skill-tag ' + type;
+  tag.innerHTML = val + ' <span class="remove" onclick="event.stopPropagation();this.parentElement.remove()">×</span>';
+  input.parentElement.insertBefore(tag, input);
+  input.value = '';
+}
+function filterJobs(el, status) {
+  document.querySelectorAll('.jobs-tabs .tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderJobs(status);
+}
+
+// ===== Synonym Library Toggle =====
+function toggleSyn(el) {
+  el.classList.toggle('open');
+}
+
+// ===== Upload Page =====
+let uploadedFiles = [];
+let isRealAnalysisRunning = false;
+function updateSelectedJob() {
+  const sel = document.getElementById('targetJobSelect');
+  const launchJob = document.getElementById('launchJob');
+  const job = JOBS.find(j => j.id === sel.value);
+  if(job) {
+    if(launchJob) launchJob.textContent = job.name;
+  } else {
+    if(launchJob) launchJob.textContent = '未选择';
+  }
+  updateLaunchCount();
+}
+
+function renderFiles() {
+  document.getElementById('fileGrid').innerHTML = uploadedFiles.map((f,i) => {
+    var badge = f._cached ? '<span style="background:rgba(22,163,74,.12);color:#16a34a;padding:2px 8px;border-radius:8px;font-size:11px;margin-left:6px">已缓存</span>' : '';
+    return '<div class="file-card"><div><strong>' + escHtml(f.name) + '</strong>' + badge + '<br/><span>' + formatFileSize(f.size) + '</span></div><button class="file-del" onclick="removeFile(' + i + ')">删除</button></div>';
+  }).join('');
+}
+function removeFile(idx) {
+  uploadedFiles.splice(idx, 1);
+  renderFiles();
+  updateLaunchCount();
+}
+function formatFileSize(size) {
+  if(typeof size !== 'number') return size || '';
+  if(size < 1024 * 1024) return Math.max(1, Math.round(size / 1024)) + ' KB';
+  return (size / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function updateLaunchCount() {
+  const el = document.getElementById('launchCount');
+  if(el) el.textContent = uploadedFiles.length + ' 份';
+  const time = document.getElementById('launchTime');
+  if(time) time.textContent = uploadedFiles.length ? `~${Math.max(1, uploadedFiles.length) * 60}秒` : '~30秒/份';
+}
+
+// ===== Screening State =====
+let screenState = {
+  running: false,
+  requirements: [],
+  candidates: [],     // { index, name, fileName, status, resume, matches, analysis, scoring }
+  completed: 0,
+  total: 0,
+  overrides: {},      // { "candidateIdx-reqId": { newStatus, reason } }
+  sessionId: null     // session ID for reconnection
+};
+
+// ===== SSE-based Analysis Flow =====
+async function parseResumes() {
+  console.log('[F1] parseResumes v2 — filePhases, weighted progress');
+  CANDIDATES.length = 0;
+  const jobSel = document.getElementById('targetJobSelect');
+  if(!jobSel.value) { alert('请先选择关联岗位'); return; }
+  if(uploadedFiles.length === 0) { alert('请先上传 PDF/DOCX/DOC 简历文件'); return; }
+  const job = JOBS.find(j => j.id === jobSel.value);
+  if(!job || !job.requirements || !job.requirements.length) { alert('所选岗位未解析 JD，请先在职位管理中保存该岗位'); return; }
+  if(screenState.running) return;
+
+  screenState.running = true;
+  screenState.candidates = uploadedFiles.map((f, i) => ({
+    index: i, name: f.name, fileName: f.name,
+    status: 'waiting', steps: [], resume: null, raw_text: '', matches: null, analysis: null, scoring: null
+  }));
+  screenState.completed = 0;
+  screenState.total = uploadedFiles.length;
+  screenState.overrides = {};
+  screenState.filePhases = {};
+
+  const btn = document.getElementById('parseResumesBtn');
+  if(btn) { btn.disabled = true; btn.textContent = '解析中...'; }
+  document.getElementById('parseStatus').textContent = '解析中...';
+  document.getElementById('parsedResumes').innerHTML = '';
+
+  // Show progress bar
+  const progressDiv = document.getElementById('parseProgressBar');
+  progressDiv.style.display = '';
+  document.getElementById('parseProgressFill').style.width = '0%';
+  document.getElementById('parseProgressLabel').textContent = '0%';
+  document.getElementById('parseFileStatuses').innerHTML = uploadedFiles.map(function(f, i) {
+    return '<span id="fstat-' + i + '" style="color:var(--muted)">⏳ ' + escHtml(f.name) + '</span><br>';
+  }).join('');
+
+  try {
+    const form = new FormData();
+    form.append('requirements', JSON.stringify(job.requirements));
+    form.append('job_id', jobSel.value);
+    uploadedFiles.forEach(file => form.append('files', file, file.name));
+
+    const response = await fetch('/api/screen-stream', { method: 'POST', body: form });
+    if(!response.ok) throw new Error(`服务端错误: ${response.status}`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while(true) {
+      const {done, value} = await reader.read();
+      if(done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      let currentEvent = '';
+
+      for(const line of lines) {
+        if(line.startsWith('event: ')) { currentEvent = line.slice(7).trim(); }
+        else if(line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            handleParseEvent(currentEvent, data);
+          } catch(e) { console.error('SSE parse error:', e, line.slice(0, 200)); }
+        }
+      }
+    }
+  } catch(err) {
+    alert('解析中断：' + (err.message || err));
+  } finally {
+    screenState.running = false;
+    if(btn) { btn.disabled = false; btn.textContent = '重新解析'; }
+    document.getElementById('parseStatus').textContent = '';
+  }
+}
+
+function updateParseProgressBar() {
+  var total = screenState.total;
+  if (!total) return;
+  var perFile = 100 / total;
+  var pct = screenState.completed * perFile;
+  // add partial progress for files currently being processed
+  for (var i = 0; i < screenState.candidates.length; i++) {
+    var c = screenState.candidates[i];
+    if (c.status === 'done' || c.status === 'error') continue;
+    var phase = screenState.filePhases[i] || '';
+    if (phase === '文档解析') pct += perFile * 0.15;
+    else if (phase === '简历提取') pct += perFile * 0.35;
+  }
+  pct = Math.min(Math.round(pct), 99);
+  document.getElementById('parseProgressFill').style.width = pct + '%';
+  document.getElementById('parseProgressLabel').textContent = Math.round(pct) + '%';
+}
+
+function handleParseEvent(event, data) {
+  switch(event) {
+    case 'progress':
+      if(data.step === 'jd_done') {
+        screenState.requirements = data.requirements || [];
+      }
+      if(data.sub_step && data.index !== undefined) {
+        screenState.filePhases[data.index] = data.sub_step;
+        updateParseProgressBar();
+        var fstat = document.getElementById('fstat-' + data.index);
+        if(fstat) {
+          fstat.innerHTML = '🔄 ' + escHtml(data.message.split(' — ')[0] || data.message);
+          fstat.style.color = 'var(--warn)';
+        }
+      }
+      break;
+    case 'candidate_done':
+      var c = screenState.candidates.find(function(x) { return x.index === data.index; });
+      if(c) {
+        c.status = 'done';
+        c.resume = data.resume || null;
+        c.raw_text = data.raw_text || '';
+        c.name = data.name || c.name;
+        screenState.completed++;
+        delete screenState.filePhases[data.index];
+        renderParsedResume(c);
+        updateLaunchSummary();
+        var fstat = document.getElementById('fstat-' + data.index);
+        if(fstat) {
+          fstat.innerHTML = '✓ ' + escHtml(c.name || data.file_name);
+          fstat.style.color = 'var(--good)';
+        }
+        updateParseProgressBar();
+      }
+      break;
+    case 'candidate_error':
+      var err = screenState.candidates.find(function(x) { return x.index === data.index; });
+      if(err) {
+        err.status = 'error';
+        err.errorMsg = data.error || '未知错误';
+        screenState.completed++;
+        delete screenState.filePhases[data.index];
+        renderParsedResume(err);
+        var fstat = document.getElementById('fstat-' + data.index);
+        if(fstat) {
+          fstat.innerHTML = '✗ ' + escHtml(data.name || '文件 ' + (data.index+1)) + ': ' + escHtml(data.error||'解析失败');
+          fstat.style.color = 'var(--danger)';
+        }
+        updateParseProgressBar();
+      }
+      break;
+    case 'error':
+    default:
+      // 也处理空 event 的情况（服务端某些错误没带 event 前缀）
+      var emsg = data.message || data.error || '';
+      if(emsg) {
+        alert('解析失败：' + emsg);
+        document.getElementById('parseStatus').innerHTML = '<span style="color:var(--danger)">' + escHtml(emsg) + '</span>';
+      }
+      break;
+    case 'complete':
+      document.getElementById('parseStatus').innerHTML = '<span style="color:var(--good)">全部解析完成</span>';
+      document.getElementById('stepScreening').style.display = '';
+      document.getElementById('parseProgressBar').style.display = 'none';
+      updateLaunchSummary();
+      break;
+  }
+}
+
+function renderParsedResume(c) {
+  const container = document.getElementById('parsedResumes');
+  if(c.status === 'error') {
+    const div = document.createElement('div');
+    div.className = 'upload-file-item';
+    div.style.borderColor = 'rgba(220,38,38,.2)';
+    div.innerHTML = '<span style="color:var(--danger);font-size:13px">✗ ' + escHtml(c.name) + ': ' + escHtml(c.errorMsg||'解析失败') + '</span>';
+    container.appendChild(div);
+    return;
+  }
+  var resume = c.resume || {};
+  var basic = resume.basic_info || {};
+  var skills = resume.skills || [];
+  var workExps = resume.work_experiences || [];
+  var projExps = resume.project_experiences || [];
+  var skillsHtml = skills.length ? skills.map(function(s) { return '<span class="resume-tag">' + escHtml(s) + '</span>'; }).join('') : '<span style="color:var(--muted)">未提取到技能</span>';
+
+  var workHtml = workExps.length ? workExps.map(function(w) {
+    var respItems = (w.responsibilities || []).map(function(r) { return '<li>' + escHtml(r) + '</li>'; }).join('');
+    return '<div class="resume-work-block">' +
+      '<div class="rw-company">' + escHtml(w.company||'') + '</div>' +
+      '<div class="rw-role-dur">' + escHtml(w.role||'') + ' | ' + escHtml(w.duration||'') + '</div>' +
+      (respItems ? '<ul style="margin:4px 0 0 16px;padding:0;line-height:1.6">' + respItems + '</ul>' : '<div class="rw-desc">' + escHtml(w.description||'') + '</div>') +
+      '</div>';
+  }).join('') : '<span style="color:var(--muted)">未提取到工作经历</span>';
+
+  var projHtml = projExps.length ? projExps.map(function(p) {
+    var techTags = (p.tech_stack || []).map(function(t) { return '<span class="resume-tag">' + escHtml(t) + '</span>'; }).join(' ');
+    return '<div class="resume-project-block">' +
+      '<div class="rp-name">' + escHtml(p.name||'') + '</div>' +
+      '<div class="rp-tech">技术栈: ' + (techTags || '—') + '</div>' +
+      '<div class="rp-desc">' + escHtml(p.description||'') + '</div>' +
+      (p.responsibility ? '<div style="margin-top:4px;font-size:12px;color:var(--muted)">个人职责: ' + escHtml(p.responsibility) + '</div>' : '') +
+      '</div>';
+  }).join('') : '<span style="color:var(--muted)">未提取到项目经历</span>';
+
+  var notesHtml = resume.extraction_notes ? '<div class="resume-notes">' + escHtml(resume.extraction_notes) + '</div>' : '';
+
+  var cardId = 'rcard-' + c.index;
+
+  // Build header skill tags (up to 6)
+  var headerTags = '';
+  var showSkills = skills.slice(0, 6);
+  for (var si = 0; si < showSkills.length; si++) {
+    headerTags += '<span class="rch-tag">' + escHtml(showSkills[si]) + '</span>';
+  }
+  if (skills.length > 6) headerTags += '<span class="rch-tag">+' + (skills.length - 6) + '</span>';
+
+  // Most recent work experience preview
+  var workPreview = '';
+  if (workExps.length > 0) {
+    var lastW = workExps[workExps.length - 1];
+    workPreview = escHtml((lastW.company||'') + ' · ' + (lastW.role||''));
+  }
+
+  var metaParts = [];
+  if (basic.school) metaParts.push(escHtml(basic.school));
+  if (basic.degree) metaParts.push(escHtml(basic.degree));
+  if (basic.work_years) metaParts.push(escHtml(basic.work_years) + '年');
+  if (basic.major) metaParts.push(escHtml(basic.major));
+  if (basic.current_role && workPreview.indexOf(basic.current_role) < 0) metaParts.push(escHtml(basic.current_role));
+  var metaHtml = metaParts.join(' · ');
+
+  var div = document.createElement('div');
+  div.className = 'resume-card';
+  div.id = cardId;
+  div.innerHTML =
+    '<div class="resume-card-head" onclick="var el=document.getElementById(\'' + cardId + '\');el.classList.toggle(\'expanded\')">' +
+      '<div class="rch-left">' +
+        '<div class="rch-name">✓ ' + escHtml(basic.name||c.name) + '</div>' +
+        '<div class="rch-meta">' + (metaHtml || '点击展开查看详情') + '</div>' +
+        (headerTags ? '<div class="rch-tags">' + headerTags + '</div>' : '') +
+        (workPreview ? '<div class="rch-desc">' + workPreview + '</div>' : '') +
+      '</div>' +
+      '<span class="rch-toggle">▼</span>' +
+    '</div>' +
+    '<div class="resume-card-body">' +
+      '<div class="resume-section">' +
+        '<div class="resume-section-title">基本信息 <span style="font-weight:400;font-size:11px;color:var(--muted)">可编辑</span></div>' +
+        '<div class="resume-basic-inline">' +
+          '<span class="rbi-item">姓名 <input value="' + escHtml(basic.name||'') + '" data-field="basic.name" placeholder="-" size="8"></span>' +
+          '<span class="rbi-item">学校 <input value="' + escHtml(basic.school||'') + '" data-field="basic.school" placeholder="-" size="12"></span>' +
+          '<span class="rbi-item">专业 <input value="' + escHtml(basic.major||'') + '" data-field="basic.major" placeholder="-" size="10"></span>' +
+          '<span class="rbi-item">学历 <input value="' + escHtml(basic.degree||'') + '" data-field="basic.degree" placeholder="-" size="6"></span>' +
+          '<span class="rbi-item">年限 <input value="' + escHtml(basic.work_years||'') + '" data-field="basic.work_years" placeholder="-" size="4"></span>' +
+          '<span class="rbi-item">职位 <input value="' + escHtml(basic.current_role||'') + '" data-field="basic.current_role" placeholder="-" size="16"></span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="resume-section">' +
+        '<div class="resume-section-title">技能</div>' +
+        '<div class="resume-tags" id="' + cardId + '-skilltags">' + skillsHtml + '</div>' +
+        '<div style="margin-top:6px;font-size:11px;color:var(--muted)">编辑（逗号分隔，保存后更新标签）</div>' +
+        '<textarea style="width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:12px/1.5 inherit;resize:vertical;min-height:32px;outline:none" data-field="skills_raw" placeholder="技能1, 技能2, ...">' + escHtml(skills.join(', ')) + '</textarea>' +
+      '</div>' +
+      '<div class="resume-section">' +
+        '<div class="resume-section-title">工作经历 <span style="font-weight:400;font-size:11px">(' + workExps.length + '段)</span></div>' +
+        '<div>' + workHtml + '</div>' +
+      '</div>' +
+      '<div class="resume-section">' +
+        '<div class="resume-section-title">项目经历 <span style="font-weight:400;font-size:11px">(' + projExps.length + '个)</span></div>' +
+        '<div>' + projHtml + '</div>' +
+      '</div>' +
+      (notesHtml ? '<div class="resume-section"><div class="resume-section-title">提取备注</div>' + notesHtml + '</div>' : '') +
+      '<div class="resume-card-actions">' +
+        '<button class="btn-save" id="' + cardId + '-save" style="display:none" onclick="saveResumeEdits(' + c.index + ')">保存修改</button>' +
+      '</div>' +
+    '</div>';
+  container.appendChild(div);
+
+  // Show save button when any field changes
+  var inputs = div.querySelectorAll('[data-field]');
+  for (var i = 0; i < inputs.length; i++) {
+    inputs[i].addEventListener('input', function() {
+      var saveBtn = document.getElementById(cardId + '-save');
+      if(saveBtn) saveBtn.style.display = 'block';
+    });
+  }
+}
+
+function saveResumeEdits(index) {
+  var c = screenState.candidates.find(function(x) { return x.index === index; });
+  if(!c) return;
+  var resume = c.resume = c.resume || {};
+  if(!resume.basic_info) resume.basic_info = {};
+
+  var cardId = 'rcard-' + index;
+  var inputs = document.querySelectorAll('#' + cardId + ' [data-field]');
+  for(var i = 0; i < inputs.length; i++) {
+    var el = inputs[i];
+    var field = el.getAttribute('data-field');
+    var val = el.value || '';
+    if(field === 'basic.name') resume.basic_info.name = val;
+    else if(field === 'basic.school') resume.basic_info.school = val;
+    else if(field === 'basic.major') resume.basic_info.major = val;
+    else if(field === 'basic.degree') resume.basic_info.degree = val;
+    else if(field === 'basic.work_years') resume.basic_info.work_years = val;
+    else if(field === 'basic.current_role') resume.basic_info.current_role = val;
+    else if(field === 'skills_raw') {
+      resume.skills = val.split(/[,，]+/).map(function(s){return s.trim();}).filter(Boolean);
+      var tagsContainer = document.getElementById(cardId + '-skilltags');
+      if(tagsContainer) {
+        tagsContainer.innerHTML = resume.skills.length
+          ? resume.skills.map(function(s){return '<span class="resume-tag">' + escHtml(s) + '</span>';}).join('')
+          : '<span style="color:var(--muted)">未提取到技能</span>';
+      }
+    }
+  }
+
+  // Update header meta + tags
+  var card = document.getElementById(cardId);
+  if(card) {
+    var b = resume.basic_info;
+    var mParts = [];
+    if (b.school) mParts.push(escHtml(b.school));
+    if (b.degree) mParts.push(escHtml(b.degree));
+    if (b.work_years) mParts.push(escHtml(b.work_years) + '年');
+    if (b.major) mParts.push(escHtml(b.major));
+    if (b.current_role) mParts.push(escHtml(b.current_role));
+    var meta = card.querySelector('.rch-meta');
+    if(meta) meta.textContent = mParts.join(' · ') || '点击展开查看详情';
+
+    var nameEl = card.querySelector('.rch-name');
+    if(nameEl) nameEl.textContent = '✓ ' + (b.name || c.name);
+
+    // Refresh header skill tags
+    var hTags = card.querySelector('.rch-tags');
+    if(hTags) {
+      var s = resume.skills || [];
+      var showS = s.slice(0, 6);
+      var tHtml = '';
+      for (var si = 0; si < showS.length; si++) {
+        tHtml += '<span class="rch-tag">' + escHtml(showS[si]) + '</span>';
+      }
+      if (s.length > 6) tHtml += '<span class="rch-tag">+' + (s.length - 6) + '</span>';
+      hTags.innerHTML = tHtml;
+      hTags.style.display = tHtml ? '' : 'none';
+    }
+  }
+
+  var saveBtn = document.getElementById(cardId + '-save');
+  if(saveBtn) saveBtn.style.display = 'none';
+}
+
+function updateLaunchSummary() {
+  const done = screenState.candidates.filter(function(x){return x.status==='done';}).length;
+  document.getElementById('launchCount').textContent = done + ' 份';
+  document.getElementById('launchTime').textContent = '~' + Math.round(done * 0.5) + '分钟';
+}
+
+// ===== Skills 3-5: 开始匹配筛选（后台处理 + 断线重连） =====
+async function startScreening() {
+  CANDIDATES.length = 0;
+  const doneCandidates = screenState.candidates.filter(function(x){return x.status==='done';});
+  if(doneCandidates.length === 0) { alert('请先解析简历'); return; }
+  if(!screenState.requirements.length) { alert('缺少岗位要求，请重新选择岗位'); return; }
+  if(screenState.running) return;
+  var jobSel = document.getElementById('targetJobSelect');
+
+  screenState.running = true;
+  screenState.candidates = doneCandidates;
+  screenState.total = doneCandidates.length;
+  screenState.completed = 0;
+  document.getElementById('startScreeningBtn').disabled = true;
+  document.getElementById('startScreeningBtn').textContent = '匹配中...';
+  showPage('progress');
+  renderProgressCards();
+
+  try {
+    var candidatesJson = JSON.stringify(doneCandidates.map(function(c) {
+      return {index: c.index, name: c.name, file_name: c.fileName, resume: c.resume, raw_text: c.raw_text||''};
+    }));
+    var form = new FormData();
+    form.append('requirements', JSON.stringify(screenState.requirements));
+    form.append('job_id', jobSel.value);
+    form.append('candidates_json', candidatesJson);
+    form.append('concurrency', '3');
+
+    var response = await fetch('/api/screen-session', { method: 'POST', body: form });
+    var result = await response.json();
+    if(!result.success) throw new Error(result.message || '启动失败');
+
+    screenState.sessionId = result.session_id;
+    sessionStorage.setItem('activeSessionId', result.session_id);
+    connectSessionStream(result.session_id);
+  } catch(err) {
+    alert('匹配启动失败：' + (err.message || err));
+    screenState.running = false;
+    document.getElementById('startScreeningBtn').disabled = false;
+    document.getElementById('startScreeningBtn').textContent = '重新匹配';
+  }
+}
+
+async function connectSessionStream(sid) {
+  try {
+    var response = await fetch('/api/session/' + encodeURIComponent(sid) + '/stream');
+    if(!response.ok) {
+      // Session may have completed already; check status
+      var statusResp = await fetch('/api/session/' + encodeURIComponent(sid) + '/status');
+      var statusData = await statusResp.json();
+      if(statusData.success && statusData.completed === statusData.total) {
+        // All done, go to results
+        loadSessionResults(sid);
+        return;
+      }
+      throw new Error('会话连接失败: ' + response.status);
+    }
+
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buffer = '';
+    while(true) {
+      var result = await reader.read();
+      if(result.done) break;
+      buffer += decoder.decode(result.value, {stream: true});
+      var lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      var currentEvent = '';
+      for(var i = 0; i < lines.length; i++) {
+        var _line = lines[i];
+        if(_line.startsWith('event: ')) { currentEvent = _line.slice(7).trim(); }
+        else if(_line.startsWith('data: ')) {
+          try {
+            var _data = JSON.parse(_line.slice(6));
+            handleSSEEvent(currentEvent, _data);
+          } catch(_e) { console.error('Session SSE parse:', _e); }
+        }
+      }
+    }
+  } catch(err) {
+    console.error('Session stream error:', err);
+    // Offer reconnection
+    if(screenState.running && screenState.sessionId) {
+      var reconnect = confirm('连接中断。是否重连？\n\n会话 ID: ' + screenState.sessionId);
+      if(reconnect) {
+        connectSessionStream(screenState.sessionId);
+      } else {
+        screenState.running = false;
+        var sBtn2 = document.getElementById('startScreeningBtn');
+        if(sBtn2) { sBtn2.disabled = false; sBtn2.textContent = '重新匹配'; }
+      }
+    }
+  }
+}
+
+async function loadSessionResults(sid) {
+  var statusResp = await fetch('/api/session/' + encodeURIComponent(sid) + '/status');
+  var statusData = await statusResp.json();
+  if(statusData.success && statusData.candidates) {
+    // Reconstruct screenState from status
+    statusData.candidates.forEach(function(sc) {
+      var c = screenState.candidates.find(function(x) { return x.index === sc.index; });
+      if(c) {
+        c.status = sc.status;
+        c.name = sc.name || c.name;
+        if(!c.scoring) c.scoring = {};
+        c.scoring.overall_score = sc.score;
+        c.scoring.tier_label = sc.tier;
+      }
+    });
+    screenState.completed = statusData.completed;
+    screenState.total = statusData.total;
+    screenState.running = false;
+    updateProgressBar();
+    screenState.candidates.forEach(function(c) { updateProgressCard(c.index); });
+    checkAllReviewed();
+  }
+}
+
+function checkActiveSession() {
+  var sid = sessionStorage.getItem('activeSessionId');
+  if(!sid) return;
+  fetch('/api/session/' + encodeURIComponent(sid) + '/status')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if(!data.success || data.completed === data.total) {
+        sessionStorage.removeItem('activeSessionId');
+        return;
+      }
+      if(data.completed < data.total) {
+        var reconnect = confirm('检测到进行中的后台筛选会话（' + data.completed + '/' + data.total + ' 已完成）。是否重连？');
+        if(reconnect) {
+          screenState.sessionId = sid;
+          screenState.running = true;
+          screenState.total = data.total;
+          screenState.completed = data.completed || 0;
+          // Init candidate slots
+          data.candidates.forEach(function(sc) {
+            if(!screenState.candidates.find(function(x) { return x.index === sc.index; })) {
+              screenState.candidates.push({
+                index: sc.index, name: sc.name, fileName: sc.name, status: sc.status,
+                steps: [], resume: null, raw_text: '', matches: [], analysis: {}, scoring: {}
+              });
+            }
+          });
+          showPage('progress');
+          renderProgressCards();
+          screenState.candidates.forEach(function(c) { updateProgressCard(c.index); });
+          connectSessionStream(sid);
+        } else {
+          sessionStorage.removeItem('activeSessionId');
+        }
+      }
+    })
+    .catch(function() {
+      sessionStorage.removeItem('activeSessionId');
+    });
+}
+
+// ===== Agent Flow =====
+
+async function startAgentFlow() {
+  console.log('[F1] startAgentFlow');
+  CANDIDATES.length = 0;
+  var jobSel = document.getElementById('targetJobSelect');
+  if(!jobSel.value) { alert('请先选择关联岗位'); return; }
+  if(uploadedFiles.length === 0) { alert('请先上传 PDF/DOCX/DOC 简历文件'); return; }
+  var job = JOBS.find(function(j) { return j.id === jobSel.value; });
+  var jdText = job ? (job.jd || '') : '';
+  if(!jdText) { alert('未找到岗位JD，请先在职位管理中保存岗位'); return; }
+  if(screenState.running) return;
+
+  screenState.running = true;
+  // Preserve pre-parsed data from existing candidates
+  var existingMap = {};
+  if(screenState.candidates && screenState.candidates.length) {
+    screenState.candidates.forEach(function(c) {
+      if(c.raw_text || (c.resume && c.resume.basic_info)) {
+        existingMap[c.index] = {raw_text: c.raw_text || '', resume: c.resume || null};
+      }
+    });
+  }
+  screenState.candidates = uploadedFiles.map(function(f, i) {
+    var prev = existingMap[i];
+    return {index: i, name: f.name, fileName: f.name, status: prev ? 'pre_parsed' : 'waiting',
+      steps: [], resume: prev ? prev.resume : null, raw_text: prev ? prev.raw_text : '',
+      matches: null, analysis: null, scoring: null, agentStopReason: '', agentPendingHR: [], agentShouldStop: false};
+  });
+  screenState.completed = 0;
+  screenState.total = uploadedFiles.length;
+  screenState.overrides = {};
+  screenState.agentSessionId = null;
+  screenState.agentPausedInfo = [];
+  var preParsed = screenState.candidates.filter(function(c) { return c.status === 'pre_parsed'; });
+  var hasPreParsed = preParsed.length > 0;
+
+  var btn = document.getElementById('startAgentBtn');
+  if(btn) { btn.disabled = true; btn.textContent = 'Agent 启动中...'; }
+  showPage('progress');
+  // Show a status banner during JD parsing
+  document.getElementById('progressCards').innerHTML =
+    '<div style="padding:16px;text-align:center;color:var(--muted)">正在解析 JD 并启动 Agent 引擎...</div>';
+  document.getElementById('progressLabel').textContent = '启动中...';
+
+  try {
+    var form = new FormData();
+    form.append('job_id', jobSel.value);
+    form.append('jd_text', jdText);
+    if(hasPreParsed) {
+      form.append('pre_parsed', JSON.stringify(preParsed.map(function(c) {
+        return {raw_text: c.raw_text, resume: c.resume};
+      })));
+    }
+    uploadedFiles.forEach(function(file) { form.append('files', file, file.name); });
+
+    // Step 1: Start agent session
+    var startResp = await fetch('/api/agent/start', {method: 'POST', body: form});
+    var startPayload = await startResp.json();
+    if(!startPayload.success) throw new Error(startPayload.message || 'Agent 启动失败');
+
+    screenState.agentSessionId = startPayload.session_id;
+    screenState.total = startPayload.total;
+    screenState.requirements = startPayload.requirements || [];
+
+    // Render proper progress cards now that session is created
+    renderProgressCards();
+    // Update pre-parsed cards immediately so they don't show 等待中
+    screenState.candidates.forEach(function(c) {
+      if(c.status === 'pre_parsed') updateProgressCard(c.index);
+    });
+
+    // Step 2: Connect to event stream
+    var response = await fetch('/api/agent/stream/' + startPayload.session_id);
+    if(!response.ok) throw new Error('Agent 连接失败: ' + response.status);
+
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buffer = '';
+    while(true) {
+      var result = await reader.read();
+      if(result.done) break;
+      buffer += decoder.decode(result.value, {stream: true});
+      var lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      var currentEvent = '';
+      for(var i = 0; i < lines.length; i++) {
+        var _line = lines[i];
+        if(_line.startsWith('event: ')) { currentEvent = _line.slice(7).trim(); }
+        else if(_line.startsWith('data: ')) {
+          try {
+            var _data = JSON.parse(_line.slice(6));
+            handleSSEEvent(currentEvent, _data);
+          } catch(_e) { console.error('Agent SSE parse:', _e); }
+        }
+      }
+    }
+  } catch(err) {
+    alert('Agent 流程中断：' + (err.message || err));
+  } finally {
+    screenState.running = false;
+    if(btn) { btn.disabled = false; btn.textContent = 'Agent 智能分析'; }
+  }
+}
+
+async function resumeAgentFlow() {
+  var sid = screenState.agentSessionId;
+  if(!sid) { alert('Agent 会话丢失，请重新开始'); return; }
+
+  var overrides = {};
+  Object.keys(screenState.overrides).forEach(function(k) {
+    var ov = screenState.overrides[k];
+    overrides[k] = {new_status: ov.newStatus, reason: ov.reason || ''};
+  });
+
+  if(Object.keys(overrides).length === 0) {
+    alert('未检测到任何修改，请先复核');
+    return;
+  }
+
+  try {
+    var resp = await fetch('/api/agent/resume/' + sid, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({overrides: overrides})
+    });
+    var payload = await resp.json();
+    if(!payload.success) throw new Error(payload.message || '恢复失败');
+
+    // Reconnect to stream for resumed events
+    var response = await fetch('/api/agent/stream/' + sid);
+    if(!response.ok) throw new Error('Agent 重连失败: ' + response.status);
+
+    showPage('progress');
+    renderProgressCards();
+
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buffer = '';
+    while(true) {
+      var result = await reader.read();
+      if(result.done) break;
+      buffer += decoder.decode(result.value, {stream: true});
+      var lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      var currentEvent = '';
+      for(var i = 0; i < lines.length; i++) {
+        var _line = lines[i];
+        if(_line.startsWith('event: ')) { currentEvent = _line.slice(7).trim(); }
+        else if(_line.startsWith('data: ')) {
+          try {
+            var _data = JSON.parse(_line.slice(6));
+            handleSSEEvent(currentEvent, _data);
+          } catch(_e) { console.error('Agent SSE parse:', _e); }
+        }
+      }
+    }
+  } catch(err) {
+    alert('Agent 恢复失败：' + (err.message || err));
+  }
+}
+
+function handleSSEEvent(event, data) {
+  switch(event) {
+    case 'progress':
+      if(data.step === 'jd_done') {
+        screenState.requirements = data.requirements || [];
+        updateProgressBar();
+      }
+      if(data.sub_step && data.index !== undefined) {
+        const cand = screenState.candidates.find(c => c.index === data.index);
+        if(cand) {
+          cand.status = data.sub_step;
+          cand.steps.push({step: data.sub_step, message: data.message});
+          updateProgressCard(data.index);
+        }
+      }
+      break;
+
+    case 'candidate_done':
+      const c = screenState.candidates.find(x => x.index === data.index);
+      if(c) {
+        c.status = 'done';
+        // 仅更新匹配/分析/评分字段，不覆盖解析阶段已有的 resume/raw_text
+        if (data.resume) c.resume = data.resume;
+        if (data.raw_text) c.raw_text = data.raw_text;
+        c.matches = data.matches || [];
+        c.analysis = data.analysis || {};
+        c.scoring = data.scoring || {};
+        c.name = data.name || c.name;
+        c.recommendation_reason = data.recommendation_reason || '';
+        c.core_advantages = data.core_advantages || [];
+        c.key_risks = data.key_risks || [];
+        c.human_review_questions = data.human_review_questions || [];
+        screenState.completed++;
+        updateProgressCard(data.index);
+        updateProgressBar();
+        checkAllReviewed();
+      }
+      break;
+
+    case 'candidate_error':
+      const err = screenState.candidates.find(x => x.index === data.index);
+      if(err) {
+        err.status = 'error';
+        err.errorMsg = data.error || '未知错误';
+        screenState.completed++;
+        updateProgressCard(data.index);
+        updateProgressBar();
+        checkAllReviewed();
+      }
+      break;
+
+    case 'complete':
+      screenState.running = false;
+      sessionStorage.removeItem('activeSessionId');
+      screenState.sessionId = null;
+      var sBtn = document.getElementById('startScreeningBtn');
+      if(sBtn) { sBtn.disabled = false; sBtn.textContent = '重新匹配'; }
+      checkAllReviewed();
+      break;
+
+    // ── Agent events ──
+    case 'agent_check':
+      var ac = screenState.candidates.find(function(x) { return x.index === data.index; });
+      if (ac) {
+        ac.agentStopReason = data.stop_reason || '';
+        ac.agentPendingHR = data.pending_hr || [];
+        ac.agentShouldStop = data.should_stop;
+        updateProgressCard(data.index);
+      }
+      break;
+
+    case 'agent_pause':
+      var ap = screenState.candidates.find(function(x) { return x.index === data.index; });
+      if (ap) {
+        ap.status = 'paused';
+        ap.agentStopReason = data.stop_reason || '';
+        ap.agentPendingHR = data.pending_hr || [];
+        updateProgressCard(data.index);
+        updateProgressBar();
+      }
+      break;
+
+    case 'agent_retry':
+      var ar = screenState.candidates.find(function(x) { return x.index === data.index; });
+      if (ar) {
+        ar.steps.push({step: 'agent_retry', message: data.message});
+        updateProgressCard(data.index);
+      }
+      break;
+
+    case 'agent_resume':
+      var arm = screenState.candidates.find(function(x) { return x.index === data.index; });
+      if (arm) {
+        arm.status = 'matching';
+        arm.agentStopReason = '';
+        arm.agentPendingHR = [];
+        arm.agentShouldStop = false;
+        updateProgressCard(data.index);
+        updateProgressBar();
+      }
+      break;
+
+    case 'agent_waiting_hr':
+      screenState.agentPausedInfo = data.paused_candidates || [];
+      checkAllReviewed();
+      break;
+
+    case 'session_created':
+      screenState.sessionId = data.session_id;
+      screenState.agentSessionId = data.session_id;
+      screenState.total = data.total;
+      break;
+
+    case 'heartbeat':
+      // keep-alive, nothing to do
+      break;
+  }
+}
+
+// ── Progress Page ──
+
+function renderProgressCards() {
+  const container = document.getElementById('progressCards');
+  // In agent mode, sort paused candidates to the top
+  var sorted = screenState.candidates.slice();
+  if(screenState.agentSessionId) {
+    sorted.sort(function(a, b) {
+      if(a.status === 'paused' && b.status !== 'paused') return -1;
+      if(a.status !== 'paused' && b.status === 'paused') return 1;
+      return a.index - b.index;
+    });
+  }
+  container.innerHTML = sorted.map(function(c) {
+    return '<div class="progress-card" id="progressCard-' + c.index + '">' +
+      '<div class="progress-card-head" onclick="expandProgressCard(' + c.index + ')">' +
+        '<div class="progress-step-dot" id="pdot-' + c.index + '"></div>' +
+        '<div class="progress-card-info">' +
+          '<h4 id="pname-' + c.index + '">' + escHtml(c.name) + '</h4>' +
+          '<p id="pstep-' + c.index + '">等待中...</p>' +
+        '</div>' +
+        '<span style="font-size:11px" id="pstatus-' + c.index + '"></span>' +
+      '</div>' +
+      '<div class="progress-card-body" id="pbody-' + c.index + '"></div>' +
+    '</div>';
+  }).join('');
+  updateProgressBar();
+}
+
+function expandProgressCard(index) {
+  var card = document.getElementById('progressCard-' + index);
+  if(!card) return;
+  card.classList.toggle('expanded');
+  if(card.classList.contains('expanded')) {
+    renderInlineReview(index);
+  }
+}
+
+function renderInlineReview(index) {
+  var c = screenState.candidates.find(function(x) { return x.index === index; });
+  var body = document.getElementById('pbody-' + index);
+  if(!c || !body) return;
+
+  var matches = Array.isArray(c.matches) ? c.matches : [];
+  if(matches.length === 0) {
+    body.innerHTML = '<p style="color:var(--muted);padding:8px 0">暂无匹配数据</p>';
+    return;
+  }
+
+  var reqs = screenState.requirements || [];
+  var reqMap = {};
+  reqs.forEach(function(r) { reqMap[r.id || r.name] = r; });
+
+  var notSatisfied = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'not_satisfied'; });
+  var cannotJudge = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'cannot_judge'; });
+  var satisfied = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'satisfied'; });
+
+  var html = '';
+  // Summary with scoring rules
+  if(c.scoring && c.scoring.counts) {
+    var sc = c.scoring.counts;
+    var score = c.scoring.overall_score;
+    var tier = c.scoring.tier_label || '';
+    var tierColor = tier === '推荐面试' ? 'var(--good)' : tier === '可考虑' ? 'var(--accent)' : tier === '暂不推荐' ? 'var(--danger)' : 'var(--warn)';
+    var breakdown = c.scoring.breakdown || '';
+    var mc = c.scoring.match_conclusion || {};
+    var mustSummary = mc.must_summary || {};
+
+    html += '<div style="background:rgba(0,0,0,.02);border-radius:12px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.7">' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+        '<span style="font-size:18px;font-weight:700;color:' + tierColor + '">' + escHtml(tier) + '</span>' +
+        '<span style="font-size:11px;color:var(--muted)">满足率 ' + Math.round((score||0)*100) + '%</span>' +
+      '</div>' +
+      // Show the key reason
+      '<div style="font-size:11px;color:var(--muted)">' +
+        (mustSummary.not_satisfied > 0
+          ? '<span style="color:var(--danger)">触发硬规则：' + mustSummary.not_satisfied + ' 项必须项不满足 → 暂不推荐</span>'
+          : mustSummary.cannot_judge > 0
+            ? '<span style="color:var(--warn)">触发硬规则：' + mustSummary.cannot_judge + ' 项必须项无法判断 → 需人工复核</span>'
+            : (score||0) >= 0.70
+              ? '<span style="color:var(--good)">加权满足率 ≥ 70% → 推荐面试</span>'
+              : (score||0) >= 0.45
+                ? '<span style="color:var(--accent)">加权满足率 ≥ 45% → 可考虑</span>'
+                : '<span style="color:var(--danger)">加权满足率 < 45% → 暂不推荐</span>') +
+      '</div>' +
+      // Detail row
+      '<div style="margin-top:4px">' +
+        '必须: <b>' + (mustSummary.satisfied||0) + '</b>/' + (mustSummary.total||0) + ' 满足' +
+        (mustSummary.not_satisfied > 0 ? ' · <b style=\"color:var(--danger)\">' + mustSummary.not_satisfied + ' 不满足</b>' : '') +
+        (mustSummary.cannot_judge > 0 ? ' · <b style=\"color:var(--warn)\">' + mustSummary.cannot_judge + ' 无法判断</b>' : '') +
+        ' · 加分: <b>' + (sc.bonus_total||0) + '</b> 项' +
+        ' · 证据验证率 ' + Math.round(((c.scoring.evidence_quality || {}).verified_rate || 0) * 100) + '%' +
+      '</div>' +
+      '</div>';
+  }
+
+  // Not satisfied — always visible
+  if(notSatisfied.length > 0) {
+    html += '<div style="font-weight:700;font-size:12px;margin:10px 0 6px;color:var(--danger)">不满足项 (' + notSatisfied.length + ')</div>';
+    html += notSatisfied.map(function(m) { return _renderMatchItem(c.index, m, reqMap); }).join('');
+  }
+
+  // Cannot judge
+  if(cannotJudge.length > 0) {
+    html += '<div style="font-weight:700;font-size:12px;margin:10px 0 6px;color:var(--warn)">无法判断 (' + cannotJudge.length + ')</div>';
+    html += cannotJudge.map(function(m) { return _renderMatchItem(c.index, m, reqMap); }).join('');
+  }
+
+  // Satisfied — collapsible
+  if(satisfied.length > 0) {
+    var satId = 'satisfiedBlock-' + index;
+    html += '<div style="font-weight:700;font-size:12px;margin:10px 0 6px;cursor:pointer;color:var(--good)" onclick="var e=document.getElementById(\'' + satId + '\');var t=this.querySelector(\'span\');if(e.style.display===\'none\'){e.style.display=\'block\';t.textContent=\'▼\'}else{e.style.display=\'none\';t.textContent=\'▶\'}">' +
+      '<span>▶</span> 已满足项 (' + satisfied.length + ')</div>' +
+      '<div id="' + satId + '" style="display:none">' +
+      satisfied.map(function(m) { return _renderMatchItem(c.index, m, reqMap); }).join('') +
+      '</div>';
+  }
+
+  // Inline resume editing section
+  html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">' +
+    '<div style="font-weight:700;font-size:12px;cursor:pointer;margin-bottom:8px" onclick="var e=document.getElementById(\'resumeEdit-' + index + '\');e.style.display=e.style.display===\'none\'?\'\':\'none\'">' +
+      '编辑简历信息 <span style="font-size:10px;color:var(--muted)">（修改后影响评分）</span>' +
+    '</div>' +
+    '<div id="resumeEdit-' + index + '" style="display:none">' +
+      _renderResumeEditFields(c) +
+      '<button class="btn primary" style="margin-top:8px;padding:6px 14px;font-size:11px" onclick="saveProgressResumeEdits(' + index + ')">保存修改并重算</button>' +
+    '</div>' +
+  '</div>';
+
+  // Override buttons for unsatisfied/cannot_judge items
+  var actionable = notSatisfied.concat(cannotJudge);
+  if(actionable.length > 0) {
+    html += '<div class="progress-card-actions">' +
+      '<span style="font-size:11px;color:var(--muted);line-height:28px">逐项确认或修改后：</span>' +
+      '<button class="btn primary" onclick="confirmCandidateReview(' + index + ')" style="padding:6px 16px;font-size:12px">确认该候选人复核</button>' +
+      '</div>';
+  }
+
+  body.innerHTML = html;
+}
+
+function _renderMatchItem(candIdx, m, reqMap) {
+  var rid = m.requirement_id || m.reqId || '';
+  var req = reqMap[rid] || {};
+  var reqName = req.name || m.requirement_name || rid || '—';
+  var status = m.status || 'cannot_judge';
+  var statusCls = status === 'satisfied' ? 'pmi-satisfied' : status === 'not_satisfied' ? 'pmi-not-satisfied' : 'pmi-cannot-judge';
+  var typeTag = req.type === 'must' ? '<span class="tag-must">必须</span>' : (req.type === 'bonus' ? '<span class="tag-bonus">加分</span>' : '');
+  var overrideKey = candIdx + '-' + rid;
+  var override = screenState.overrides[overrideKey];
+  var isOverridden = !!override;
+  var displayStatus = override ? override.newStatus : status;
+  var displayStatusCls = displayStatus === 'satisfied' ? 'pmi-satisfied' : displayStatus === 'not_satisfied' ? 'pmi-not-satisfied' : 'pmi-cannot-judge';
+  var displayLabel = displayStatus === 'satisfied' ? '✓ 满足' : displayStatus === 'not_satisfied' ? '✗' : '?';
+
+  var mBarPct = Math.round((m.match_degree || 0) * 100);
+  var mBarColor = status === 'satisfied' ? 'var(--good)' : status === 'not_satisfied' ? 'var(--danger)' : 'var(--warn)';
+  return '<div class="progress-match-item' + (isOverridden ? ' overridden' : '') + '" id="pmatch-' + overrideKey + '">' +
+    '<div class="pmi-left">' +
+      '<div class="pmi-name">' + escHtml(reqName) + ' ' + typeTag + '</div>' +
+      '<div class="pmi-evidence">' + escHtml(m.evidence || m.reasoning || '无证据') + '</div>' +
+      '<div class="pmi-meta">' +
+        '<span style="display:inline-flex;align-items:center;gap:6px">' +
+          '<span>匹配 ' + Math.round((m.match_degree||0)*100) + '%</span>' +
+          '<div style="width:50px;height:4px;background:rgba(0,0,0,.08);border-radius:2px;overflow:hidden;display:inline-block;vertical-align:middle">' +
+            '<div style="height:100%;width:' + mBarPct + '%;background:' + mBarColor + ';border-radius:2px"></div>' +
+          '</div>' +
+          '<span>| 置信度 ' + Math.round((m.confidence||0)*100) + '%</span>' +
+        '</span>' +
+      '</div>' +
+      (isOverridden && override.reason ? '<div style="font-size:10px;margin-top:4px;padding:4px 8px;border-radius:6px;background:rgba(202,138,4,.08);color:#92400e">HR备注: ' + escHtml(override.reason) + '</div>' : '') +
+    '</div>' +
+    '<div class="pmi-status">' +
+      '<span class="' + displayStatusCls + '">' + displayLabel + '</span>' +
+      (isOverridden ? '<div style="font-size:10px;color:#92400e;margin-top:2px">已修改</div>' : '') +
+      '<div style="margin-top:4px;display:flex;gap:4px;justify-content:flex-end">' +
+        '<button style="font-size:10px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:' + (displayStatus === 'satisfied' ? 'rgba(22,163,74,.12)' : 'transparent') + ';cursor:pointer" onclick="event.stopPropagation();overrideMatchInline(\'' + overrideKey + '\',\'' + rid + '\',\'satisfied\')">满足</button>' +
+        '<button style="font-size:10px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:' + (displayStatus === 'not_satisfied' ? 'rgba(220,38,38,.08)' : 'transparent') + ';cursor:pointer" onclick="event.stopPropagation();overrideMatchInline(\'' + overrideKey + '\',\'' + rid + '\',\'not_satisfied\')">不满足</button>' +
+        '<button style="font-size:10px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;background:' + (displayStatus === 'cannot_judge' ? 'rgba(202,138,4,.08)' : 'transparent') + ';cursor:pointer" onclick="event.stopPropagation();overrideMatchInline(\'' + overrideKey + '\',\'' + rid + '\',\'cannot_judge\')">无法判断</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function _renderResumeEditFields(c) {
+  var basic = (c.resume && c.resume.basic_info) || {};
+  var skills = (c.resume && c.resume.skills) || [];
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px">' +
+    '<div><b>姓名:</b> <input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:11px/1.5 inherit" value="' + escHtml(basic.name || '') + '" data-field="name" data-cand="' + c.index + '"></div>' +
+    '<div><b>学校:</b> <input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:11px/1.5 inherit" value="' + escHtml(basic.school || '') + '" data-field="school" data-cand="' + c.index + '"></div>' +
+    '<div><b>学历:</b> <input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:11px/1.5 inherit" value="' + escHtml(basic.degree || '') + '" data-field="degree" data-cand="' + c.index + '"></div>' +
+    '<div><b>专业:</b> <input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:11px/1.5 inherit" value="' + escHtml(basic.major || '') + '" data-field="major" data-cand="' + c.index + '"></div>' +
+    '<div><b>工作年限:</b> <input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:11px/1.5 inherit" value="' + escHtml(basic.work_years || '') + '" data-field="work_years" data-cand="' + c.index + '"></div>' +
+    '<div><b>当前职位:</b> <input style="width:100%;border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:11px/1.5 inherit" value="' + escHtml(basic.current_role || '') + '" data-field="current_role" data-cand="' + c.index + '"></div>' +
+    '<div style="grid-column:1/-1"><b>技能（逗号分隔）:</b> <textarea style="width:100%;min-height:32px;border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:11px/1.5 inherit;resize:vertical" data-field="skills" data-cand="' + c.index + '">' + escHtml(skills.join(', ')) + '</textarea></div>' +
+    '</div>';
+}
+
+function saveProgressResumeEdits(index) {
+  var c = screenState.candidates.find(function(x) { return x.index === index; });
+  if(!c) return;
+  c.resume = c.resume || {};
+  if(!c.resume.basic_info) c.resume.basic_info = {};
+  var section = document.getElementById('resumeEdit-' + index);
+  if(!section) return;
+  var inputs = section.querySelectorAll('[data-field]');
+  inputs.forEach(function(el) {
+    var field = el.getAttribute('data-field');
+    var val = (el.value || '').trim();
+    if(field === 'name') c.resume.basic_info.name = val;
+    else if(field === 'school') c.resume.basic_info.school = val;
+    else if(field === 'degree') c.resume.basic_info.degree = val;
+    else if(field === 'major') c.resume.basic_info.major = val;
+    else if(field === 'work_years') c.resume.basic_info.work_years = val;
+    else if(field === 'current_role') c.resume.basic_info.current_role = val;
+    else if(field === 'skills') c.resume.skills = val.split(/[,，]+/).map(function(s) { return s.trim(); }).filter(Boolean);
+  });
+  updateProgressCard(index);
+  // Flash save confirmation
+  var btn = section.querySelector('button');
+  if(btn) {
+    var orig = btn.textContent;
+    btn.textContent = '已保存';
+    btn.style.background = 'var(--good)';
+    setTimeout(function() { btn.textContent = orig; btn.style.background = ''; }, 1500);
+  }
+}
+
+function overrideMatchInline(overrideKey, requirementId, newStatus) {
+  var existing = screenState.overrides[overrideKey];
+  if(existing && existing.newStatus === newStatus) {
+    delete screenState.overrides[overrideKey];
+  } else {
+    screenState.overrides[overrideKey] = { requirementId: requirementId, newStatus: newStatus, reason: '' };
+  }
+  var candIdx = parseInt(overrideKey.split('-')[0]);
+  recalculateScore(candIdx);
+  updateProgressCard(candIdx);
+  renderInlineReview(candIdx);
+}
+
+function recalculateScore(index) {
+  var c = screenState.candidates.find(function(x) { return x.index === index; });
+  if(!c || !c.matches || !c.matches.length) return;
+
+  var reqs = screenState.requirements || [];
+  var reqMap = {};
+  reqs.forEach(function(r) { reqMap[r.id || r.name] = r; });
+
+  var impW = { high: 3, medium: 2, low: 1 };
+
+  var mustItems = [];
+  var bonusItems = [];
+  var totalWeight = 0;
+  var satisfiedWeight = 0;
+
+  for(var i = 0; i < c.matches.length; i++) {
+    var m = c.matches[i];
+    var rid = m.requirement_id || m.reqId || '';
+    var req = reqMap[rid] || {};
+    var reqType = req.type || 'bonus';
+    var importance = req.importance || 'medium';
+
+    var overrideKey = index + '-' + rid;
+    var override = screenState.overrides[overrideKey];
+    var status = override ? override.newStatus : (m.status || 'cannot_judge');
+
+    var w = impW[importance] || 2;
+    if(reqType === 'must') w *= 2;
+
+    totalWeight += w;
+    if(status === 'satisfied') satisfiedWeight += w;
+
+    var itemInfo = { id: rid, name: req.name || rid, status: status, importance: importance };
+    if(reqType === 'must') { mustItems.push(itemInfo); }
+    else { bonusItems.push(itemInfo); }
+  }
+
+  var weightedSatisfaction = totalWeight > 0 ? satisfiedWeight / totalWeight : 0;
+
+  var mustSatisfied = mustItems.filter(function(i) { return i.status === 'satisfied'; });
+  var mustNotSatisfied = mustItems.filter(function(i) { return i.status === 'not_satisfied'; });
+  var mustCannotJudge = mustItems.filter(function(i) { return i.status === 'cannot_judge'; });
+  var bonusSatisfied = bonusItems.filter(function(i) { return i.status === 'satisfied'; });
+
+  var tier, tierLabel;
+  if(mustNotSatisfied.length > 0) {
+    tier = 'not_recommend'; tierLabel = '暂不推荐';
+  } else if(mustCannotJudge.length > 0) {
+    tier = 'needs_review'; tierLabel = '需人工复核';
+  } else if(weightedSatisfaction >= 0.70) {
+    tier = 'recommend'; tierLabel = '推荐面试';
+  } else if(weightedSatisfaction >= 0.45) {
+    tier = 'consider'; tierLabel = '可考虑';
+  } else {
+    tier = 'not_recommend'; tierLabel = '暂不推荐';
+  }
+
+  var existingScoring = c.scoring || {};
+  var ws = Math.round(weightedSatisfaction * 10000) / 10000;
+
+  c.scoring = {
+    overall_score: ws,
+    tier: tier,
+    tier_label: tierLabel,
+    match_conclusion: {
+      tier: tier,
+      tier_label: tierLabel,
+      weighted_satisfaction: ws,
+      must_summary: {
+        total: mustItems.length,
+        satisfied: mustSatisfied.length,
+        not_satisfied: mustNotSatisfied.length,
+        cannot_judge: mustCannotJudge.length
+      },
+      bonus_summary: { total: bonusItems.length, satisfied: bonusSatisfied.length },
+      hard_rule_triggered: !!(mustNotSatisfied.length || mustCannotJudge.length)
+    },
+    confidence_assessment: existingScoring.confidence_assessment || {},
+    evidence_quality: existingScoring.evidence_quality || {},
+    counts: {
+      satisfied: c.matches.filter(function(m) {
+        var ov = screenState.overrides[index + '-' + (m.requirement_id || m.reqId || '')];
+        return (ov ? ov.newStatus : m.status) === 'satisfied';
+      }).length,
+      not_satisfied: c.matches.filter(function(m) {
+        var ov = screenState.overrides[index + '-' + (m.requirement_id || m.reqId || '')];
+        return (ov ? ov.newStatus : m.status) === 'not_satisfied';
+      }).length,
+      cannot_judge: c.matches.filter(function(m) {
+        var ov = screenState.overrides[index + '-' + (m.requirement_id || m.reqId || '')];
+        return (ov ? ov.newStatus : m.status) === 'cannot_judge';
+      }).length,
+      must_total: mustItems.length,
+      must_satisfied: mustSatisfied.length,
+      bonus_total: bonusItems.length
+    },
+    breakdown: (
+      '加权满足率=' + Math.round(weightedSatisfaction * 100) + '% ' +
+      '(必须项: ' + mustSatisfied.length + '/' + mustItems.length + '满足' +
+      (mustNotSatisfied.length ? ', ' + mustNotSatisfied.length + '不满足' : '') +
+      (mustCannotJudge.length ? ', ' + mustCannotJudge.length + '无法判断' : '') +
+      ')'
+    )
+  };
+}
+
+function confirmCandidateReview(index) {
+  var c = screenState.candidates.find(function(x) { return x.index === index; });
+  if(!c) return;
+  // Apply overrides to this candidate's matches
+  Object.keys(screenState.overrides).forEach(function(k) {
+    var parts = k.split('-');
+    if(parts[0] === String(index)) {
+      var ov = screenState.overrides[k];
+      if(c.matches) {
+        var m = c.matches.find(function(x) { return (x.requirement_id || x.reqId) === ov.requirementId; });
+        if(m) { m.status = ov.newStatus; m._hr_overridden = true; }
+      }
+    }
+  });
+  // Mark as reviewed
+  c._reviewed = true;
+  // Collapse card
+  var card = document.getElementById('progressCard-' + index);
+  if(card) card.classList.remove('expanded');
+  updateProgressCard(index);
+
+  // Check if all actionable candidates are reviewed
+  checkAllReviewed();
+}
+
+function checkAllReviewed() {
+  var isAgentMode = !!screenState.agentSessionId;
+  var actionable = screenState.candidates.filter(function(c) {
+    if(isAgentMode) return c.status === 'paused';
+    return c.status === 'done';
+  });
+  var allReviewed = actionable.every(function(c) { return c._reviewed; });
+  var allDone = screenState.candidates.every(function(c) { return c.status === 'done' || c.status === 'error'; });
+
+  var reviewBtn = document.getElementById('btnEnterReview');
+  var resultsBtn = document.getElementById('btnGoResults');
+
+  // Hide both by default
+  if(reviewBtn) reviewBtn.style.display = 'none';
+  if(resultsBtn) resultsBtn.style.display = 'none';
+
+  if(allReviewed && actionable.length > 0) {
+    // All reviews done, show results button
+    if(resultsBtn) {
+      resultsBtn.style.display = 'inline-flex';
+    }
+  } else if(allDone && actionable.length === 0 && screenState.completed > 0) {
+    // Everything done, no paused candidates needing review
+    if(resultsBtn) {
+      resultsBtn.style.display = 'inline-flex';
+    }
+  } else if(actionable.length > 0 && !allReviewed) {
+    // Candidates need HR review - show review button
+    if(reviewBtn) {
+      reviewBtn.style.display = 'inline-flex';
+      reviewBtn.textContent = '进入 HR 复核（' + actionable.length + '人待复核）→';
+      reviewBtn.onclick = function() { showPage('progress'); };
+    }
+  }
+}
+
+function goToFinalResults() {
+  CANDIDATES.splice(0, CANDIDATES.length, ...screenState.candidates.filter(function(c) { return c.status === 'done' || c.status === 'paused'; }).map(mapScreenCandidate));
+  showPage('results');
+  renderResults();
+  var jobSel = document.getElementById('targetJobSelect');
+  var header = document.querySelector('#pg-results .results-header h3');
+  if(header) header.textContent = (getJobName(jobSel ? jobSel.value : '') || '筛选') + ' — 筛选结果';
+  var sub = document.querySelector('#pg-results .results-header span');
+  if(sub) sub.textContent = CANDIDATES.length + ' 位候选人 · 复核完成于 ' + new Date().toLocaleString('zh-CN');
+  addRecentActivity('HR 复核完成，' + CANDIDATES.length + ' 位候选人结果已确认');
+}
+
+async function confirmAllReviews() {
+  var isAgentMode = !!screenState.agentSessionId;
+
+  if(isAgentMode) {
+    var stillPaused = screenState.candidates.some(function(x) { return x.status === 'paused'; });
+    if(stillPaused) {
+      await resumeAgentFlow();
+      return;
+    }
+  }
+
+  // Show progress/review page first, let HR review before going to results
+  showPage('progress');
+  addRecentActivity('匹配完成，' + screenState.candidates.length + ' 位候选人待复核');
+}
+
+function updateProgressCard(index) {
+  var c = screenState.candidates.find(function(x) { return x.index === index; });
+  if(!c) return;
+
+  var dot = document.getElementById('pdot-' + index);
+  var nameEl = document.getElementById('pname-' + index);
+  var stepEl = document.getElementById('pstep-' + index);
+  var statusEl = document.getElementById('pstatus-' + index);
+  var card = document.getElementById('progressCard-' + index);
+
+  if(!dot || !stepEl) return;
+
+  if(nameEl && c.name !== c.fileName) nameEl.textContent = c.name;
+
+  var isAgentMode = !!screenState.agentSessionId;
+
+  if(c.status === 'pre_parsed') {
+    dot.className = 'progress-step-dot ok'; dot.textContent = '✓';
+    stepEl.textContent = '已有缓存，跳过提取';
+    statusEl.textContent = '✓'; statusEl.style.color = 'var(--good)';
+  } else if(c.status === 'done') {
+    dot.className = 'progress-step-dot ok'; dot.textContent = '✓';
+    var sc = c.scoring || {};
+    var counts = sc.counts || {};
+    var score = sc.overall_score;
+    var tier = sc.tier_label || '';
+    var mc = sc.match_conclusion || {};
+    var mustSummary = mc.must_summary || {};
+    var tierColor = tier === '推荐面试' ? 'var(--good)' : tier === '可考虑' ? 'var(--accent)' : tier === '暂不推荐' ? 'var(--danger)' : 'var(--warn)';
+    var reasonHtml = '';
+    if(mustSummary.not_satisfied > 0) {
+      reasonHtml = ' <span style="font-size:10px;color:var(--danger)">(' + mustSummary.not_satisfied + '项必须不满足)</span>';
+    } else if(mustSummary.cannot_judge > 0) {
+      reasonHtml = ' <span style="font-size:10px;color:var(--warn)">(' + mustSummary.cannot_judge + '项必须无法判断)</span>';
+    } else if((score||0) >= 0.70) {
+      reasonHtml = ' <span style="font-size:10px;color:var(--good)">(满足率≥70%)</span>';
+    } else if((score||0) >= 0.45) {
+      reasonHtml = ' <span style="font-size:10px;color:var(--accent)">(满足率≥45%)</span>';
+    } else {
+      reasonHtml = ' <span style="font-size:10px;color:var(--danger)">(满足率&lt;45%)</span>';
+    }
+    // Build resume preview: company + role, compressed basic info
+    var resume = c.resume || {};
+    var basic = resume.basic_info || {};
+    var workExps = resume.work_experiences || [];
+    var companyPreview = '';
+    if(workExps.length > 0) {
+      var lastW = workExps[workExps.length - 1];
+      companyPreview = escHtml((lastW.company || '') + (lastW.role ? ' · ' + lastW.role : ''));
+    } else if(basic.current_role) {
+      companyPreview = escHtml(basic.current_role);
+    }
+    var metaParts = [];
+    if(basic.school) metaParts.push(escHtml(basic.school));
+    if(basic.degree) metaParts.push(escHtml(basic.degree));
+    if(basic.work_years) metaParts.push(escHtml(basic.work_years) + '年');
+    var metaHtml = metaParts.join(' · ');
+    var previewHtml = (companyPreview || metaHtml) ? '<span style="font-size:12px;color:var(--text)">' + companyPreview + '</span>' + (metaHtml ? ' <span style="font-size:10px;color:var(--muted)">' + metaHtml + '</span>' : '') + '<br>' : '';
+    stepEl.innerHTML = previewHtml + '评分 <b>' + Math.round((score||0)*100) + '%</b> · <b style="color:' + tierColor + '">' + escHtml(tier) + '</b>' + reasonHtml;
+    if(!isAgentMode) {
+      // One-click mode: every done candidate needs review
+      statusEl.innerHTML = c._reviewed
+        ? '<span style="color:var(--good)">已复核 ✓</span>'
+        : '<button class="btn primary" style="padding:4px 12px;font-size:11px" onclick="event.stopPropagation();expandProgressCard(' + c.index + ')">HR 复核</button>';
+    } else {
+      // Agent mode: done = auto-approved
+      statusEl.innerHTML = '<span style="color:var(--good)">Agent 已确认 ✓</span>';
+    }
+    statusEl.style.color = '';
+  } else if(c.status === 'paused') {
+    dot.className = 'progress-step-dot err'; dot.textContent = '!';
+    stepEl.textContent = '需HR复核: ' + (c.agentStopReason || '多项要求无法判断');
+    statusEl.innerHTML = c._reviewed
+      ? '<span style="color:var(--good)">已复核 ✓</span>'
+      : '<button class="btn primary" style="padding:4px 12px;font-size:11px;background:var(--warn);color:#fff" onclick="event.stopPropagation();expandProgressCard(' + c.index + ')">复核</button>';
+    statusEl.style.color = '';
+    card.style.borderColor = 'rgba(202,138,4,.35)';
+    card.style.background = 'rgba(202,138,4,.04)';
+  } else if(c.status === 'error') {
+    dot.className = 'progress-step-dot err'; dot.textContent = '✗';
+    stepEl.textContent = '处理失败: ' + (c.errorMsg || '');
+    statusEl.textContent = '✗'; statusEl.style.color = 'var(--danger)';
+  } else {
+    dot.className = 'progress-step-dot running'; dot.textContent = '';
+    stepEl.textContent = c.status || '处理中';
+    statusEl.textContent = '...'; statusEl.style.color = '';
+  }
+
+  // Re-sort in agent mode: paused first
+  if(isAgentMode && (c.status === 'done' || c.status === 'paused')) {
+    var container = document.getElementById('progressCards');
+    var cards = Array.from(container.children);
+    cards.sort(function(a, b) {
+      var aPaused = a.id.replace('progressCard-', '');
+      var bPaused = b.id.replace('progressCard-', '');
+      var ca = screenState.candidates.find(function(x) { return 'progressCard-' + x.index === a.id; });
+      var cb = screenState.candidates.find(function(x) { return 'progressCard-' + x.index === b.id; });
+      if(!ca || !cb) return 0;
+      if(ca.status === 'paused' && cb.status !== 'paused') return -1;
+      if(ca.status !== 'paused' && cb.status === 'paused') return 1;
+      return ca.index - cb.index;
+    });
+    cards.forEach(function(card) { container.appendChild(card); });
+  }
+}
+
+function updateProgressBar() {
+  const total = screenState.total;
+  const done = screenState.completed;
+  const bar = document.getElementById('progressBarFill');
+  const label = document.getElementById('progressLabel');
+  if(bar) bar.style.width = total > 0 ? Math.round(done/total*100) + '%' : '0%';
+  if(label) label.textContent = done + '/' + total;
+}
+
+function mapScreenCandidate(c, index) {
+  const resume = c.resume || {};
+  const basic = resume.basic_info || {};
+  const scoring = c.scoring || {};
+  const analysis = c.analysis || {};
+  const matches = c.matches || [];
+  return {
+    id: `cand-${c.index}`,
+    name: c.name,
+    summary: scoring.tier_label || '',
+    education: [basic.degree, basic.school, basic.major].filter(Boolean).join(' · ') || '简历未明确',
+    workYears: basic.work_years || '未明确',
+    matchItems: matches.map(mapBackendMatch),
+    satisfied_count: scoring.counts?.satisfied ?? matches.filter(m=>m.status==='satisfied').length,
+    not_satisfied_count: scoring.counts?.not_satisfied ?? matches.filter(m=>m.status==='not_satisfied').length,
+    cannot_judge_count: scoring.counts?.cannot_judge ?? matches.filter(m=>m.status==='cannot_judge').length,
+    risks: c.key_risks || analysis.key_risks || [],
+    advantages: c.core_advantages || analysis.core_advantages || [],
+    recommendation_reason: c.recommendation_reason || '',
+    agentChecks: [scoring.tier_label || ''].filter(Boolean),
+    interview_suggestions: ((analysis.interview_suggestions || []).map(q => typeof q === 'string' ? {suggestion:q} : q)),
+    human_review_questions: c.human_review_questions || [],
+    reviewQuestions: (c.human_review_questions || analysis.interview_suggestions || []).map(q => typeof q === 'string' ? q : (q.suggestion || '')),
+    needsReview: false,
+    reviewLog: [],
+    _score: scoring.overall_score
+  };
+}
+
+function mapBackendMatch(m) {
+  const reqId = m.reqId || m.requirement_id || '';
+  const validation = m.validation || {};
+  const source = Array.isArray(m.evidence_sources) && m.evidence_sources[0] ? m.evidence_sources[0] : {};
+  const status = m.status || 'cannot_judge';
+  return {
+    reqId,
+    status,
+    match_degree: status === 'satisfied' ? (m.match_degree ?? validation.similarity ?? 0.8) : 0,
+    confidence: m.confidence ?? (validation.verified ? 0.85 : 0.5),
+    evidence_source: source.source_type || m.evidence_source || 'resume_evidence',
+    evidence_support: m.evidence_support || (validation.verified ? '确凿' : '部分'),
+    evidence: m.evidence || source.content || '',
+    evidence_location: m.evidence_location || source.source_location || '—',
+    reasoning: m.reasoning || '',
+    validation,
+    synonyms_used: m.synonyms_used || [],
+    status_changed: Boolean(m.status_changed)
+  };
+}
+// ===== Results Page =====
+let compareSet = new Set();
+let currentDetailCandidateId = null;
+let recentActivities = [];
+
+function addRecentActivity(text) {
+  recentActivities.unshift(text);
+  recentActivities = recentActivities.slice(0, 5);
+  renderRecentActivities();
+}
+
+function renderRecentActivities() {
+  const el = document.getElementById('recentActivityList');
+  if(!el) return;
+  if(recentActivities.length === 0) {
+    el.innerHTML = '<div class="activity-item"><div class="activity-dot"></div><div class="activity-text">暂无真实筛选记录</div></div>';
+    return;
+  }
+  el.innerHTML = recentActivities.map(text => `
+    <div class="activity-item"><div class="activity-dot"></div><div class="activity-text">${text}</div></div>
+  `).join('');
+}
+
+async function refreshDashboard() {
+  // Refresh resume counts from all jobs
+  try {
+    var totalResumes = 0;
+    var totalScreened = 0;
+    var allScores = [];
+
+    // Sum up resume counts from all jobs
+    for (var i = 0; i < JOBS.length; i++) {
+      var jb = JOBS[i];
+      totalResumes += (jb.resumeCount || 0);
+      totalScreened += (jb.screenedCount || 0);
+    }
+
+    var dashCount = document.getElementById('dashResumeCount');
+    var dashDetail = document.getElementById('dashResumeDetail');
+    var dashScore = document.getElementById('dashAvgScore');
+    var dashScoreDetail = document.getElementById('dashScoreDetail');
+
+    if (dashCount) dashCount.textContent = totalResumes || '—';
+    if (dashDetail) dashDetail.textContent = totalScreened > 0 ? (totalScreened + '份已完成筛选') : (totalResumes > 0 ? totalResumes + '份待筛选' : '上传简历开始筛选');
+
+    // Compute average score from current CANDIDATES
+    var scored = CANDIDATES.filter(function(c) { return c._score !== undefined && c._score > 0; });
+    var totalMatchScore = 0;
+    if (scored.length > 0) {
+      for (var si = 0; si < scored.length; si++) {
+        totalMatchScore += scored[si]._score;
+      }
+      var avg = Math.round(totalMatchScore / scored.length);
+      if (dashScore) dashScore.textContent = avg + '%';
+      if (dashScoreDetail) dashScoreDetail.textContent = '基于' + scored.length + '位候选人结果';
+    } else {
+      if (dashScore) dashScore.textContent = '—';
+      if (dashScoreDetail) dashScoreDetail.textContent = '暂无筛选结果';
+    }
+  } catch(e) { /* ignore */ }
+}
+
+function getTierInfo(score, rec) {
+  if (score >= 85) return {label:'强推荐', cls:'strong'};
+  if (score >= 70) return {label:'推荐', cls:'good'};
+  if (score >= 45) return {label:'需复核', cls:'review'};
+  return {label:'不推荐', cls:'weak'};
+}
+
+function renderDecisionPanel(candidate) {
+  const satisfied = candidate.matchItems.filter(m => m.status === 'satisfied').length;
+  const notSatisfied = candidate.matchItems.filter(m => m.status === 'not_satisfied').length;
+  const cannotJudge = candidate.matchItems.filter(m => m.status === 'cannot_judge').length;
+  const total = candidate.matchItems.length;
+  const score = computeScore(candidate.matchItems);
+  const conf = avgConfidence(candidate.matchItems);
+  const rec = computeRecommendation(candidate.matchItems);
+  const tier = getTierInfo(score, rec);
+  candidate._score = score;
+  candidate._rec = rec;
+
+  const advList = (candidate.advantages||[]).map(a => `<li class="good"><span class="ico">✓</span>${a}</li>`).join('');
+  const riskList = (candidate.risks||[]).map(r => `<li class="bad"><span class="ico">⚠</span>${r}</li>`).join('');
+  const agentChecks = (candidate.agentChecks||[]).map(c => `<li class="info"><span class="ico">●</span>${c}</li>`).join('');
+
+  document.getElementById('decisionPanel').innerHTML = `
+    <div class="decision-main">
+      <div class="decision-score-wrap">
+        <div class="decision-score">${score}</div>
+        <div class="decision-score-label">综合匹配分</div>
+        <div class="decision-tier ${tier.cls}">${tier.label}</div>
+      </div>
+      <div class="decision-info">
+        <h3>${candidate.name} · ${rec.text}</h3>
+        <div class="decision-meta">
+          <div class="decision-stat"><span class="dot sat"></span>${satisfied} 满足</div>
+          <div class="decision-stat"><span class="dot not"></span>${notSatisfied} 不满足</div>
+          <div class="decision-stat"><span class="dot unk"></span>${cannotJudge} 无法判断</div>
+          <div class="decision-stat">置信度 ${Math.round(conf*100)}%</div>
+        </div>
+        <div class="decision-reason">${rec.reason}</div>
+        <div class="decision-actions">
+          <button class="btn primary" onclick="handleReview('${candidate.id}','approve')">✓ 确认推进</button>
+          <button class="btn ghost" onclick="handleReview('${candidate.id}','hold')">⏸ 暂缓</button>
+          <button class="btn ghost" style="color:var(--danger)" onclick="handleReview('${candidate.id}','reject')">✗ 淘汰</button>
+        </div>
+      </div>
+    </div>
+    <div class="decision-section advantages">
+      <h4>✓ 优势 <span class="count-badge">${candidate.advantages ? candidate.advantages.length : 0}</span></h4>
+      <ul class="decision-list">${advList || '<li style="color:var(--muted);font-size:12px">暂无</li>'}</ul>
+    </div>
+    <div class="decision-section risks">
+      <h4>⚠ 风险 <span class="count-badge">${candidate.risks ? candidate.risks.length : 0}</span></h4>
+      <ul class="decision-list">${riskList || '<li style="color:var(--muted);font-size:12px">暂无</li>'}</ul>
+    </div>
+    ${candidate.agentChecks && candidate.agentChecks.length > 0 ? `
+    <div class="decision-section agent" style="grid-column:1/-1">
+      <h4>🤖 Agent 判断 <span class="count-badge">${candidate.agentChecks.length} 项</span></h4>
+      <ul class="decision-list">${agentChecks}</ul>
+    </div>` : ''}
+    ${candidate.reviewQuestions && candidate.reviewQuestions.length > 0 ? `
+    <div class="decision-section questions" style="grid-column:1/-1">
+      <h4>❓ 待HR确认 <span class="count-badge">${candidate.reviewQuestions.length}</span></h4>
+      ${candidate.reviewQuestions.map((q,i) => renderReviewQuestion(q,i,candidate.id)).join('')}
+    </div>` : ''}
+  `;
+}
+
+function toggleMatchCard(card) {
+  card.classList.toggle('collapsed');
+}
+
+function renderMatchList(candidate) {
+  const SUPPORT_COLOR = {确凿:{bg:'rgba(22,163,74,.08)',c:'#166534',icon:'验'},部分:{bg:'rgba(202,138,4,.08)',c:'#92400e',icon:'~'},未找到:{bg:'rgba(220,38,38,.08)',c:'#991b1b',icon:'✗'}};
+  const MATCH_TYPE_LABEL = {exact:'精确匹配',fuzzy:'模糊匹配',not_found:'未找到'};
+  const STATUS_ICON = {satisfied:'✓',not_satisfied:'✗',cannot_judge:'?'};
+  document.getElementById('matchList').innerHTML = candidate.matchItems.map(m => {
+    const req = JOB_REQUIREMENTS.find(r => r.id === m.reqId);
+    if (!req) return '';
+    const statusLabel = {satisfied:'满足',not_satisfied:'不满足',cannot_judge:'无法判断'}[m.status];
+    const sourceLabel = EVIDENCE_SOURCE_LABEL[m.evidence_source] || m.evidence_source;
+    const matchBar = m.status==='satisfied' ? (m.match_degree*100) : 0;
+    const matchBarColor = m.status==='satisfied' ? 'var(--good)' : m.status==='not_satisfied' ? 'var(--danger)' : 'var(--warn)';
+    const confColor = m.confidence >= 0.8 ? 'var(--good)' : m.confidence >= 0.5 ? 'var(--warn)' : 'var(--danger)';
+    const v = m.validation || {};
+    const supp = SUPPORT_COLOR[m.evidence_support] || SUPPORT_COLOR['未找到'];
+    const vt = v.match_type || 'not_found';
+    const matchTypeLabel = vt==='fuzzy' ? `模糊匹配(>${(v.similarity||0).toFixed(2)})` : MATCH_TYPE_LABEL[vt];
+    const evBg = m.evidence_source==='system_inference' ? 'rgba(202,138,4,.04)' : 'rgba(22,163,74,.04)';
+    const evidencePreview = m.evidence && m.evidence.length > 60 ? m.evidence.substring(0,60)+'...' : (m.evidence||'');
+    return `
+      <div class="match-card collapsed" onclick="toggleMatchCard(this)">
+        <div class="match-head">
+          <h4><span style="font-weight:900;margin-right:4px;color:${m.status==='satisfied'?'var(--good)':m.status==='not_satisfied'?'var(--danger)':'var(--warn)'}">${STATUS_ICON[m.status]}</span> ${req.name} <span class="${req.type==='must'?'tag-must':'tag-bonus'}">${req.type==='must'?'必须':'加分'}</span></h4>
+          <div style="display:flex;align-items:center;gap:8px;pointer-events:auto">
+            ${m.status_changed ? '<span style="font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(202,138,4,.15);color:#92400e;font-weight:700">已降级</span>' : ''}
+            <div class="match-status ${m.status}">${statusLabel}</div>
+            <button class="btn ghost" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();openHROverride('${candidate.id}','${m.reqId}')">🔍 复核</button>
+            <span class="match-collapse-icon" onclick="event.stopPropagation();toggleMatchCard(this.closest('.match-card'))">▼</span>
+          </div>
+        </div>
+        <div class="match-hint">${evidencePreview || req.description.substring(0,60)+'...'}</div>
+        <div class="match-body">${req.description}</div>
+        <div class="match-evidence" style="background:${evBg}">
+          <span style="background:${evBg};padding:2px 6px;border-radius:4px">${m.evidence}</span>
+          ${m.evidence_location ? `<div style="margin-top:4px;font-size:10px;color:var(--muted)">📍 证据位置: ${m.evidence_location}</div>` : ''}
+          <div style="margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:10px;padding:2px 6px;border-radius:999px;background:${supp.bg};color:${supp.c};font-weight:600">[${supp.icon}] 证据支撑: ${m.evidence_support||'未找到'}</span>
+            <span style="font-size:10px;padding:2px 6px;border-radius:999px;background:${v.verified?'rgba(22,163,74,.08)':'rgba(202,138,4,.08)'};color:${v.verified?'#166534':'#92400e'};font-weight:600">${v.verified?'✓ 验证通过':'⚠ '+matchTypeLabel}</span>
+            <span style="font-size:10px;padding:2px 6px;border-radius:999px;background:${m.evidence_source==='resume_evidence'?'rgba(22,163,74,.12)':m.evidence_source==='hr_verified_evidence'?'rgba(37,99,235,.12)':'rgba(202,138,4,.12)'};color:${m.evidence_source==='resume_evidence'?'#166534':m.evidence_source==='hr_verified_evidence'?'#1e40af':'#92400e'}">${sourceLabel}</span>
+          </div>
+        </div>
+        ${m.synonyms_used && m.synonyms_used.length > 0 ? `<div style="margin-top:6px;display:flex;align-items:center;gap:4px;flex-wrap:wrap"><span style="font-size:10px;color:var(--muted)">关键词:</span>${m.synonyms_used.map(s => `<span style="font-size:10px;padding:2px 6px;border-radius:999px;background:rgba(120,113,108,.06);border:1px solid var(--line);color:var(--muted)">${s}</span>`).join('')}</div>` : ''}
+        <div class="confidence-bar" style="margin-top:8px">
+          <span style="font-size:11px;color:var(--muted)">匹配度</span>
+          <div class="conf-track"><div class="conf-fill" style="width:${matchBar}%;background:${matchBarColor}"></div></div>
+          <div class="conf-val">${Math.round(matchBar)}%</div>
+        </div>
+        <div class="confidence-bar">
+          <span style="font-size:11px;color:var(--muted)">置信度</span>
+          <div class="conf-track"><div class="conf-fill" style="width:${m.confidence*100}%;background:${confColor}"></div></div>
+          <div class="conf-val" style="color:${confColor}">${Math.round(m.confidence*100)}%</div>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:var(--muted)">💡 ${m.reasoning}</div>
+        ${m.confidence < 0.5 ? '<div class="review-flag">⚠️ 低置信度，建议人工复核</div>' : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderResults() {
+  // Ensure JOB_REQUIREMENTS is populated for dimension rendering
+  if(!JOB_REQUIREMENTS.length && screenState.requirements && screenState.requirements.length) {
+    JOB_REQUIREMENTS.splice(0, JOB_REQUIREMENTS.length, ...screenState.requirements.map((r, i) => ({
+      id: r.id || 'req-' + String(i+1).padStart(3,'0'),
+      name: r.name || r.requirement_name || '要求' + (i+1),
+      description: r.description || '',
+      type: r.type || 'must',
+      importance: r.importance || 'medium',
+      keywords: r.keywords || []
+    })));
+  }
+  const listEl = document.getElementById('candidateList');
+  if(CANDIDATES.length === 0) {
+    listEl.innerHTML =
+      '<div class="card" style="text-align:center;padding:48px 24px">' +
+        '<h4 style="font-size:18px;margin-bottom:8px">暂无真实筛选结果</h4>' +
+        '<p style="color:var(--muted);font-size:13px;line-height:1.7">请先上传 PDF/DOCX/DOC 简历并开始筛选分析。</p>' +
+        '<button class="btn primary" style="margin-top:16px" onclick="showPage(\'upload\')">去上传简历</button>' +
+      '</div>';
+    updateCompareBar();
+    return;
+  }
+  var sorted = [].concat(CANDIDATES).sort(function(a,b) { return computeScore(b.matchItems) - computeScore(a.matchItems); });
+  listEl.innerHTML = sorted.map(function(c, i) {
+    var score = computeScore(c.matchItems);
+    var rec = computeRecommendation(c.matchItems);
+    var confAvg = avgConfidence(c.matchItems);
+    c._score = score; c._rec = rec;
+    var satisfied = c.matchItems.filter(function(m) { return m.status === 'satisfied'; }).length;
+    var notSatisfied = c.matchItems.filter(function(m) { return m.status === 'not_satisfied'; }).length;
+    var cannotJudge = c.matchItems.filter(function(m) { return m.status === 'cannot_judge'; }).length;
+    return '<div class="cand-row" id="cand-' + c.id + '">' +
+      '<div class="cand-main" onclick="toggleExpand(\'' + c.id + '\')">' +
+        '<div class="cand-rank">#' + (i + 1) + '</div>' +
+        '<div class="cand-info">' +
+          '<div class="cand-name" style="font-size:14px">' + escHtml(c.name) + ' <span class="rec ' + rec.cls + '" id="rec-' + c.id + '" style="font-size:11px">' + rec.text + '</span></div>' +
+          '<div class="cand-summary" style="font-size:11px">' + escHtml(c.summary) + '</div>' +
+        '</div>' +
+        '<div class="cand-score-col">' +
+          '<div class="cand-score-num" id="score-' + c.id + '" style="font-size:22px">' + score + '</div>' +
+          '<div class="cand-score-label" style="font-size:10px">匹配分 <span style="font-size:9px;color:var(--muted)">· 置信 ' + Math.round(confAvg * 100) + '%</span></div>' +
+        '</div>' +
+        '<div class="cand-dims">' +
+          '<span class="dim-chip good" style="font-size:10px">' + satisfied + ' 满足</span>' +
+          '<span class="dim-chip bad" style="font-size:10px">' + notSatisfied + ' 不满足</span>' +
+          '<span class="dim-chip unknown" style="font-size:10px">' + cannotJudge + ' 待定</span>' +
+        '</div>' +
+        '<div class="cand-actions">' +
+          '<label class="cmp-check" onclick="event.stopPropagation()" style="font-size:11px"><input type="checkbox" onchange="toggleCompare(\'' + c.id + '\',this.checked)"/> 对比</label>' +
+          '<span class="expand-arrow">▼</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cand-expand" id="expand-' + c.id + '">' +
+        '<div class="expand-content">' +
+          '<div class="expand-left">' +
+            '<div>' +
+              '<div class="expand-title" style="font-size:13px">逐项匹配维度 <span style="font-weight:400;font-size:10px;color:var(--muted)">（匹配度 | 置信度）</span></div>' +
+              '<div style="font-size:10px;color:var(--muted);margin-bottom:8px">满足: <b style="color:var(--good)">' + (c.satisfied_count || satisfied) + '</b> | 不满足: <b style="color:var(--danger)">' + (c.not_satisfied_count || notSatisfied) + '</b> | 无法判断: <b style="color:var(--warn)">' + (c.cannot_judge_count || cannotJudge) + '</b></div>' +
+              c.matchItems.map(function(m) {
+                var req = JOB_REQUIREMENTS.find(function(r) { return r.id === m.reqId; });
+                if(!req) return '';
+                var statusLabel = {satisfied:'满足',not_satisfied:'不满足',cannot_judge:'无法判断'}[m.status];
+                var matchPct = m.status === 'satisfied' ? Math.round(m.match_degree * 100) : 0;
+                var matchColor = m.status === 'satisfied' ? 'var(--good)' : m.status === 'not_satisfied' ? 'var(--danger)' : 'var(--muted)';
+                var confColor = m.confidence >= 0.8 ? 'var(--good)' : m.confidence >= 0.5 ? 'var(--warn)' : 'var(--danger)';
+                return '<div class="dim-row" style="font-size:11px">' +
+                  '<div class="dim-name" style="font-size:12px">' + escHtml(req.name) + ' <span class="' + (req.type === 'must' ? 'tag-must' : 'tag-bonus') + '" style="font-size:9px">' + (req.type === 'must' ? '必须' : '加分') + '</span></div>' +
+                  '<div class="dim-bar-wrap">' +
+                    '<div class="dim-bar"><div class="dim-fill" style="width:' + matchPct + '%;background:' + matchColor + '"></div></div>' +
+                    '<span class="dim-val" style="font-size:11px;font-weight:700;min-width:32px">' + matchPct + '%</span>' +
+                    '<span style="font-size:9px;color:' + confColor + ';min-width:32px;text-align:right" title="置信度">信' + Math.round(m.confidence * 100) + '%</span>' +
+                  '</div>' +
+                  '<div style="display:flex;align-items:center;gap:4px">' +
+                    '<div class="dim-status ' + (m.status||'cannot_judge') + '" style="font-size:10px">' + statusLabel + '</div>' +
+                    (m._hr_overridden ? '<span style="font-size:9px;background:rgba(202,138,4,.15);color:#92400e;padding:1px 5px;border-radius:99px">已复核</span>' : '') +
+                  '</div>' +
+                  (m.evidence ? '<div style="font-size:10px;color:var(--muted);grid-column:1/-1;padding:2px 0 0 24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + escHtml(m.evidence) + '">证据: ' + escHtml(m.evidence) + '</div>' : '') +
+                '</div>';
+              }).join('') +
+            '</div>' +
+          '</div>' +
+          '<div class="expand-right">' +
+            '<div class="expand-right-top">' +
+              '<div style="background:rgba(217,119,87,.06);border:1px solid rgba(217,119,87,.15);border-radius:14px;padding:12px 14px">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><span class="expand-title" style="font-size:12px;margin-bottom:0">推荐理由</span><span class="rec ' + rec.cls + '" style="font-size:10px">' + rec.text + '</span></div>' +
+                '<div style="font-size:10px;color:var(--muted);margin-bottom:6px">' + rec.reason + ' | 平均置信度 ' + Math.round(confAvg * 100) + '%</div>' +
+                (c.recommendation_reason ? '<div style="font-size:12px;line-height:1.7;color:var(--text);padding:8px 10px;background:rgba(255,255,255,.7);border-radius:10px;margin-bottom:6px">' + escHtml(c.recommendation_reason) + '</div>' : '') +
+                '<div class="expand-reason" id="reason-' + c.id + '" style="font-size:11px;margin-bottom:0;padding:0;border:none;background:none">' +
+                  (c.advantages ? c.advantages.map(function(a) { return '<div class="reason-item good" style="font-size:11px">✓ ' + escHtml(a) + '</div>'; }).join('') : '') +
+                  (c.risks ? c.risks.map(function(r) { return '<div class="reason-item bad" style="font-size:11px">⚠ ' + escHtml(r) + '</div>'; }).join('') : '') +
+                '</div>' +
+              '</div>' +
+              (c.interview_suggestions && c.interview_suggestions.length > 0 ? '<div style="background:rgba(37,99,235,.04);border:1px solid rgba(37,99,235,.12);border-radius:14px;padding:12px 14px;margin-top:10px"><div class="expand-title" style="font-size:11px;margin-bottom:8px">🎯 面试推进建议</div>' + c.interview_suggestions.map(function(s, si) { return '<div style="font-size:11px;color:var(--text);padding:5px 0;line-height:1.5;border-bottom:' + (si < c.interview_suggestions.length - 1 ? '1px solid rgba(0,0,0,.04)' : 'none') + '"><b style="color:var(--accent)">' + (si + 1) + '.</b> ' + escHtml(s.suggestion || s) + '</div>'; }).join('') + '</div>' : '') +
+            '</div>' +
+            '<div class="review-inline" style="margin-top:auto;padding-top:4px;margin-bottom:8px;justify-content:flex-end">' +
+              (c._hrDecision ?
+                '<div style="padding:8px 14px;border-radius:12px;font-size:12px;font-weight:700;background:' + (c._hrDecision === 'approve' ? 'rgba(22,163,74,.1)' : c._hrDecision === 'hold' ? 'rgba(202,138,4,.1)' : 'rgba(220,38,38,.1)') + ';color:' + (c._hrDecision === 'approve' ? 'var(--good)' : c._hrDecision === 'hold' ? 'var(--warn)' : 'var(--danger)') + '">' +
+                  (c._hrDecision === 'approve' ? '✓ 已同意推进' : c._hrDecision === 'hold' ? '⏸ 已暂缓' : '✗ 已淘汰') +
+                  '<span style="font-weight:400;font-size:10px;display:block;color:var(--muted)">' + (c._hrDecisionTime ? new Date(c._hrDecisionTime).toLocaleString('zh-CN') : '') + '</span>' +
+                '</div>'
+              :
+                '<button class="btn primary" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'approve\')" style="padding:8px 14px;font-size:12px">✓ 同意推进</button>' +
+                '<button class="btn ghost" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'hold\')" style="padding:8px 14px;font-size:12px">⏸ 暂缓</button>' +
+                '<button class="btn ghost" style="padding:8px 14px;font-size:12px;color:var(--danger)" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'reject\')">✗ 不同意</button>'
+              ) +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  updateCompareBar();
+}
+
+function toggleExpand(id) {
+  const el = document.getElementById('expand-' + id);
+  const row = document.getElementById('cand-' + id);
+  if(el.classList.contains('open')) {
+    el.classList.remove('open');
+    row.classList.remove('expanded');
+  } else {
+    el.classList.add('open');
+    row.classList.add('expanded');
+  }
+}
+
+function openResumeFile(candidateId) {
+  const candidate = CANDIDATES.find(c => c.id === candidateId);
+  if(candidate && candidate.fileUrl) {
+    window.open(candidate.fileUrl, '_blank');
+    return;
+  }
+  alert('暂无可打开的原始简历文件');
+}
+
+function toggleCompare(id, checked) {
+  if(checked) compareSet.add(id); else compareSet.delete(id);
+  updateCompareBar();
+}
+
+function updateCompareBar() {
+  const bar = document.getElementById('compareBar');
+  const count = document.getElementById('compareCount');
+  count.textContent = compareSet.size;
+  bar.style.display = compareSet.size >= 2 ? 'flex' : 'none';
+}
+
+function startCompare() {
+  if(compareSet.size < 2) { alert('请至少勾选2人'); return; }
+  // 限制最多3人
+  const selected = [...compareSet].slice(0, 3).map(id => CANDIDATES.find(c=>c.id===id)).filter(Boolean);
+  const body = document.getElementById('compareBody');
+
+  let html = `<div class="compare-cards" style="grid-template-columns:repeat(${selected.length},1fr)">`;
+
+  selected.forEach(c => {
+    // 计算核心技能 vs 辅助技能 得分
+    const coreSkills = c.matchItems.filter(m => ['req-001','req-002','req-003'].includes(m.reqId));
+    const auxSkills  = c.matchItems.filter(m => ['req-004','req-005','req-006'].includes(m.reqId));
+    const coreScore  = coreSkills.length ? Math.round(coreSkills.reduce((s,m)=>s+(m.match_degree||0)*100,0)/coreSkills.length) : 0;
+    const auxScore   = auxSkills.length  ? Math.round(auxSkills.reduce((s,m)=>s+(m.match_degree||0)*100,0)/auxSkills.length)   : 0;
+    const score = computeScore(c.matchItems);
+    const rec = computeRecommendation(c.matchItems);
+    // 学历简写
+    const eduShort = (c.education || '').split('·')[1]?.trim() || c.education || '—';
+    // 描述：综合摘要 + 主要风险
+    const mainRisk = c.risks && c.risks[0] ? c.risks[0] : '暂无明显风险';
+    const desc = `综合匹配度 ${score}，推荐「${rec.text}」。主要风险：${mainRisk}。`;
+
+    html += `<div class="compare-card">
+      <div class="compare-card-header">
+        <div class="compare-card-name">${c.name}</div>
+        <div class="compare-card-score">${score}</div>
+      </div>
+      <div class="compare-card-desc">${desc}</div>
+      <div class="compare-stats">
+        <div class="compare-stat-row">
+          <div class="compare-stat">
+            <span class="compare-stat-label">匹配度</span>
+            <span class="compare-stat-value hi">${score}</span>
+          </div>
+          <div class="compare-stat">
+            <span class="compare-stat-label">推荐</span>
+            <span class="compare-stat-value">${rec.text}</span>
+          </div>
+        </div>
+        <div class="compare-stat-row">
+          <div class="compare-stat">
+            <span class="compare-stat-label">核心技能匹配</span>
+            <span class="compare-stat-value">${coreScore}.0</span>
+          </div>
+          <div class="compare-stat">
+            <span class="compare-stat-label">学历</span>
+            <span class="compare-stat-value">${eduShort}</span>
+          </div>
+        </div>
+      </div>
+      <div class="compare-section-title match">匹配点</div>
+      <ul class="compare-list">${(c.advantages||[]).slice(0,3).map(a=>`<li>· ${a}</li>`).join('') || '<li>—</li>'}</ul>
+      <div class="compare-section-title risk">风险点</div>
+      <ul class="compare-list">${(c.risks||[]).slice(0,3).map(r=>`<li>· ${r}</li>`).join('') || '<li>· 无</li>'}</ul>
+      <div class="compare-action">
+        <button class="compare-action-btn" onclick="handleReview('${c.id}','hold')">暂不进入下一轮</button>
+      </div>
+    </div>`;
+  });
+
+  html += `</div>`;
+  body.innerHTML = html;
+  document.getElementById('compareModal').classList.add('open');
+}
+
+function closeCompare() {
+  document.getElementById('compareModal').classList.remove('open');
+}
+
+function renderReviewQuestion(question, index, candidateId) {
+  return `
+    <div class="review-q" data-question="${candidateId}-${index}">
+      <div>${question}</div>
+      <div class="review-q-actions">
+        <button class="review-choice ok" onclick="event.stopPropagation();handleQuestionReview(this,'confirm')">确认满足</button>
+        <button class="review-choice no" onclick="event.stopPropagation();handleQuestionReview(this,'deny')">不满足</button>
+        <button class="review-choice" onclick="event.stopPropagation();handleQuestionReview(this,'follow')">待追问</button>
+      </div>
+      <div class="review-outcome"></div>
+    </div>
+  `;
+}
+
+// ===== HR 复核弹窗（逐项修改结论 + 审计记录 + 局部重算）=====
+
+function openHROverride(candidateId, reqId) {
+  var candidate = CANDIDATES.find(function(x){return x.id === candidateId;});
+  if (!candidate) return;
+  var matchItem = candidate.matchItems.find(function(m){return m.reqId === reqId;});
+  if (!matchItem) return;
+  var req = JOB_REQUIREMENTS.find(function(r){return r.id === reqId;});
+  var sourceLabel = EVIDENCE_SOURCE_LABEL[matchItem.evidence_source] || matchItem.evidence_source;
+  var statusLabel = {satisfied:'满足', not_satisfied:'不满足', cannot_judge:'无法判断'}[matchItem.status];
+
+  document.getElementById('hrCandidateId').value = candidateId;
+  document.getElementById('hrReqId').value = reqId;
+  document.getElementById('hrReqDisplay').textContent = (req ? req.name : reqId) + ' — ' + (req ? req.description : '');
+  var suppLabel = matchItem.evidence_support || '未找到';
+  var vLabel = (matchItem.validation && matchItem.validation.verified) ? '✓ 验证通过' : '⚠ 未验证';
+  document.getElementById('hrCurrentStatus').innerHTML =
+    '<span class="match-status ' + matchItem.status + '">' + statusLabel + '</span> ' +
+    '<span style="font-size:11px;color:var(--muted);margin-left:8px">证据支撑: ' + suppLabel + '</span> ' +
+    '<span style="font-size:11px;color:var(--muted)">| 置信度: ' + Math.round(matchItem.confidence*100) + '%</span> ' +
+    '<span style="font-size:11px;color:var(--muted)">| ' + vLabel + '</span>';
+  document.getElementById('hrNewStatus').value = matchItem.status;
+  document.getElementById('hrOperator').value = '';
+  document.getElementById('hrReason').value = '';
+  document.getElementById('hrEvidence').value = '';
+  document.getElementById('hrOverrideResult').style.display = 'none';
+  document.getElementById('hrOverrideResult').textContent = '';
+  document.getElementById('hrOverrideModal').classList.add('show');
+}
+
+function closeHROverride() {
+  document.getElementById('hrOverrideModal').classList.remove('show');
+}
+
+async function submitHROverride() {
+  var candidateId = document.getElementById('hrCandidateId').value;
+  var reqId = document.getElementById('hrReqId').value;
+  var operator = document.getElementById('hrOperator').value.trim();
+  var newStatus = document.getElementById('hrNewStatus').value;
+  var reason = document.getElementById('hrReason').value.trim();
+  var evidence = document.getElementById('hrEvidence').value.trim();
+  var resultEl = document.getElementById('hrOverrideResult');
+
+  if (!operator) { resultEl.style.display = 'block'; resultEl.innerHTML = '<span style="color:var(--danger)">请填写操作人</span>'; return; }
+  if (!reason) { resultEl.style.display = 'block'; resultEl.innerHTML = '<span style="color:var(--danger)">请填写修改原因</span>'; return; }
+
+  var candidate = CANDIDATES.find(function(x){return x.id === candidateId;});
+  if (!candidate) return;
+  var matchItem = candidate.matchItems.find(function(m){return m.reqId === reqId;});
+  if (!matchItem) return;
+
+  var beforeStatus = matchItem.status;
+  try {
+    const response = await fetch('/api/hr-override', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        run_id: candidate.runId || '',
+        candidate_id: candidate.id,
+        requirement_id: reqId,
+        operator: operator,
+        new_status: newStatus,
+        reason: reason,
+        supplementary_evidence: evidence,
+        validated_items: candidate._backend?.validated_items || candidate._backend?.matches || [],
+      })
+    });
+    const payload = await response.json();
+    if(!response.ok || !payload.success) throw new Error(payload.message || '复核审计保存失败');
+  } catch (err) {
+    resultEl.style.display = 'block';
+    resultEl.innerHTML = '<span style="color:var(--danger)">复核保存失败：' + escHtml(err.message || err) + '</span>';
+    return;
+  }
+
+  // 更新匹配项
+  matchItem.status = newStatus;
+  if (newStatus === 'satisfied') {
+    matchItem.match_degree = 0.65;
+    matchItem.confidence = 0.70;
+  } else if (newStatus === 'not_satisfied') {
+    matchItem.match_degree = 0;
+    matchItem.confidence = 0.85;
+  } else {
+    matchItem.match_degree = 0;
+    matchItem.confidence = 0.50;
+  }
+  // 更新验证状态
+  if (!matchItem.validation) matchItem.validation = {};
+  matchItem.status_changed = true;
+  matchItem.validation.verified = true;
+  matchItem.validation.match_type = 'exact';
+  matchItem.validation.similarity = 1.0;
+  if (evidence) {
+    matchItem.evidence_source = 'hr_verified_evidence';
+    matchItem.evidence = evidence;
+    matchItem.evidence_support = '确凿';
+    matchItem.evidence_location = 'HR确认补充';
+  }
+  matchItem.reasoning = 'HR复核: ' + reason;
+
+  // 记录审计
+  addReviewLog(candidate, '逐项修改', reqId + ': ' + beforeStatus + ' → ' + newStatus + ' | 原因: ' + reason + (evidence ? ' | 补充证据: ' + evidence : ''));
+
+  // 局部重算
+  refreshCandidateBadges(candidate);
+  var score = computeScore(candidate.matchItems);
+  var rec = computeRecommendation(candidate.matchItems);
+
+  resultEl.style.display = 'block';
+  resultEl.innerHTML =
+    '<div style="padding:10px 14px;border-radius:12px;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.2)">' +
+    '<span style="color:var(--good);font-weight:700">✓ 修改完成</span><br>' +
+    '<span style="font-size:12px;color:var(--muted)">已局部重算：匹配分 ' + score + '，推荐「' + rec.text + '」</span><br>' +
+    '<span style="font-size:10px;color:var(--muted)">操作人: ' + escHtml(operator) + ' | ' + new Date().toLocaleString() + '</span>' +
+    '</div>';
+
+  // 如果正在看详情页，刷新
+  if (currentDetailCandidateId === candidateId) {
+    renderDecisionPanel(candidate);
+    renderMatchList(candidate);
+    renderAuditLog(candidate);
+  }
+
+  // 刷新列表
+  renderResults();
+  addRecentActivity('<b>' + candidate.name + '</b> 的「' + ((JOB_REQUIREMENTS.find(function(r){return r.id===reqId;}) || {}).name || reqId) + '」被HR复核修改为 ' + ({satisfied:'满足',not_satisfied:'不满足',cannot_judge:'无法判断'})[newStatus]);
+
+  // 2秒后关闭
+  setTimeout(function() { closeHROverride(); }, 2500);
+}
+
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+/** 展示HR审计日志 */
+function renderAuditLog(candidate) {
+  var container = document.getElementById('auditLog');
+  if (!container) return;
+  if (!candidate.reviewLog || candidate.reviewLog.length === 0) {
+    container.innerHTML = '<p style="font-size:12px;color:var(--muted)">暂无复核记录</p>';
+    return;
+  }
+  container.innerHTML = candidate.reviewLog.slice().reverse().map(function(log) {
+    return '<div style="padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.6);border:1px solid var(--line);margin-bottom:6px;font-size:12px">' +
+      '<span style="font-weight:700">' + escHtml(log.action) + '</span>' +
+      '<span style="color:var(--muted);margin-left:8px">' + escHtml(log.operator) + ' | ' + new Date(log.timestamp).toLocaleString() + '</span>' +
+      '<div style="color:var(--muted);margin-top:2px">' + escHtml(log.detail) + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function setCandidateRecommendation(candidate, recommendation, recClass) {
+  candidate._rec = {text: recommendation, cls: recClass, reason: 'HR手动调整'};
+}
+
+function addRisk(candidate, risk) {
+  candidate.risks = candidate.risks || [];
+  if(!candidate.risks.includes(risk)) candidate.risks.unshift(risk);
+}
+
+/** 记录HR操作审计 */
+function addReviewLog(candidate, action, detail) {
+  if (!candidate.reviewLog) candidate.reviewLog = [];
+  candidate.reviewLog.push({
+    action: action,
+    operator: 'HR',
+    timestamp: new Date().toISOString(),
+    detail: detail
+  });
+}
+
+function refreshCandidateBadges(candidate) {
+  const score = computeScore(candidate.matchItems);
+  const rec = computeRecommendation(candidate.matchItems);
+  candidate._score = score;
+  candidate._rec = rec;
+  const scoreEl = document.getElementById(`score-${candidate.id}`);
+  if(scoreEl) scoreEl.textContent = score;
+  const recEl = document.getElementById(`rec-${candidate.id}`);
+  if(recEl) {
+    recEl.textContent = rec.text;
+    recEl.className = `rec ${rec.cls}`;
+  }
+  const reasonEl = document.getElementById(`reason-${candidate.id}`);
+  if(reasonEl) {
+    reasonEl.innerHTML = `
+      ${candidate.advantages ? candidate.advantages.map(a => `<div class="reason-item good">✓ ${a}</div>`).join('') : ''}
+      ${candidate.risks ? candidate.risks.map(r => `<div class="reason-item bad">⚠ ${r}</div>`).join('') : ''}
+    `;
+  }
+  const decisionPanel = document.getElementById('decisionPanel');
+  if(decisionPanel && currentDetailCandidateId === candidate.id) {
+    renderDecisionPanel(candidate);
+    renderMatchList(candidate);
+  }
+}
+
+function showAgentUpdate(candidateId, message) {
+  const notice = document.getElementById('agentUpdateNotice');
+  if(notice && currentDetailCandidateId === candidateId) {
+    notice.innerHTML = `<b>Agent 已完成局部重算：</b>${message}`;
+    notice.style.display = 'block';
+  }
+}
+
+function applyQuestionDecision(candidateId, action) {
+  const candidate = CANDIDATES.find(x => x.id === candidateId);
+  if(!candidate) return '';
+  if(action === 'confirm') {
+    // HR确认：更新状态为satisfied，标记证据来源为hr_verified_evidence
+    const targetItem = candidate.matchItems.find(m => m.status === 'cannot_judge');
+    if(targetItem) {
+      const beforeStatus = targetItem.status;
+      targetItem.status = 'satisfied';
+      targetItem.match_degree = 0.65;
+      targetItem.confidence = 0.68;
+      targetItem.evidence_source = 'hr_verified_evidence';
+      targetItem.reasoning = 'HR 已确认该经历可作为补充证据，系统已局部更新匹配判断';
+      addReviewLog(candidate, '确认满足', `${targetItem.reqId}: ${beforeStatus} → satisfied（HR补充确认）`);
+    }
+    addRecentActivity(`<b>${candidate.name}</b> 的复核反馈已生效，Agent 局部重算匹配结果`);
+    refreshCandidateBadges(candidate);
+    var score = computeScore(candidate.matchItems);
+    var rec = computeRecommendation(candidate.matchItems);
+    return '系统已局部重算：匹配分更新为 ' + score + '，当前建议为「' + rec.text + '」。<br><span style="font-size:11px;color:var(--muted)">证据来源已标记为「HR确认补充」</span>';
+  }
+  if(action === 'deny') {
+    addRisk(candidate, 'HR 驳回复核项，相关经历不作为满足证据');
+    addReviewLog(candidate, '驳回', 'HR确认该项不满足，不作为证据采纳');
+    addRecentActivity('<b>' + candidate.name + '</b> 的复核项被驳回，Agent 更新建议');
+    refreshCandidateBadges(candidate);
+    var score2 = computeScore(candidate.matchItems);
+    var rec2 = computeRecommendation(candidate.matchItems);
+    return '系统已局部重算：匹配分更新为 ' + score2 + '，风险点已更新，当前建议为「' + rec2.text + '」。';
+  }
+  candidate.needsReview = true;
+  addRisk(candidate, 'HR 标记待追问，需在面试中确认该能力深度');
+  addReviewLog(candidate, '待追问', 'HR标记待追问，进入面试清单');
+  setCandidateRecommendation(candidate, '暂缓待追问', 'rec-review');
+  addRecentActivity('<b>' + candidate.name + '</b> 被标记为待追问，Agent 已生成复核记录');
+  refreshCandidateBadges(candidate);
+  return '系统已更新：该问题进入面试追问清单，当前建议为「暂缓待追问」。';
+}
+
+function handleQuestionReview(btn, action) {
+  const item = btn.closest('.review-q');
+  const outcome = item.querySelector('.review-outcome');
+  const candidateId = item.dataset.question.split('-').slice(0, 2).join('-');
+  item.classList.remove('confirmed','rejected');
+  item.classList.add(action === 'confirm' ? 'confirmed' : 'rejected');
+  outcome.style.display = 'block';
+  const labels = {
+    confirm:'HR 已确认：该项可按满足处理，系统将提高对应匹配判断权重。',
+    deny:'HR 已驳回：该项不作为满足证据，系统建议暂缓或降低推荐等级。',
+    follow:'HR 已标记待追问：该问题进入面试追问清单，当前建议保持暂缓。'
+  };
+  const recalculation = applyQuestionDecision(candidateId, action);
+  outcome.textContent = labels[action] + ' ' + recalculation;
+  showAgentUpdate(candidateId, recalculation);
+}
+
+function handleReview(candidateId, action) {
+  const candidate = CANDIDATES.find(x => x.id === candidateId);
+  if(!candidate) return;
+
+  const labels = {
+    approve:'已确认推进 — 候选人进入面试流程',
+    hold:'已暂缓 — 保留不确定项等待补充',
+    reject:'已淘汰归档 — 不满足原因已记录'
+  };
+  const labelActions = {
+    approve:'确认推进',
+    hold:'暂缓',
+    reject:'淘汰'
+  };
+
+  // Record the HR decision on the candidate
+  candidate._hrDecision = action;
+  candidate._hrDecisionLabel = labels[action];
+  candidate._hrDecisionTime = new Date().toISOString();
+
+  if(action === 'approve') {
+    setCandidateRecommendation(candidate, '已确认推进', 'rec-good');
+    addReviewLog(candidate, '确认推进', 'HR确认候选人进入下一轮面试');
+    addRecentActivity('<b>' + candidate.name + '</b> 已由 HR 确认推进');
+  } else if(action === 'hold') {
+    setCandidateRecommendation(candidate, '暂缓待补充', 'rec-review');
+    addRisk(candidate, 'HR 暂缓处理，需补充信息后再次判断');
+    addReviewLog(candidate, '暂缓', 'HR暂缓，等待补充信息');
+    addRecentActivity('<b>' + candidate.name + '</b> 已暂缓');
+  } else if(action === 'reject') {
+    setCandidateRecommendation(candidate, '已淘汰归档', 'rec-bad');
+    addRisk(candidate, 'HR 确认淘汰，相关不满足原因已归档');
+    addReviewLog(candidate, '淘汰', 'HR确认淘汰归档');
+    addRecentActivity('<b>' + candidate.name + '</b> 已淘汰归档');
+  }
+
+  // Re-render results to reflect changes immediately
+  renderResults();
+  renderRecentActivities();
+}
+
+// ===== Detail Page =====
+function showDetail(candidateId) {
+  const c = CANDIDATES.find(x => x.id === candidateId);
+  if(!c) return;
+  currentDetailCandidateId = candidateId;
+  document.getElementById('detailName').textContent = c.name + ' — 匹配分析详情';
+  renderDecisionPanel(c);
+  renderMatchList(c);
+  // Review section: simplified, questions already shown in decision panel
+  const reviewEl = document.getElementById('reviewSection');
+  reviewEl.style.display = 'none';
+  document.getElementById('reviewQuestions').innerHTML = '';
+  const detailResult = document.getElementById('detailReviewResult');
+  detailResult.dataset.candidateId = c.id;
+  detailResult.style.display = 'none';
+  detailResult.textContent = '';
+  const updateNotice = document.getElementById('agentUpdateNotice');
+  if(updateNotice) {
+    updateNotice.style.display = 'none';
+    updateNotice.textContent = '';
+  }
+  // 审计日志
+  renderAuditLog(c);
+  const auditSection = document.getElementById('auditSection');
+  if(auditSection) auditSection.style.display = 'block';
+  showPage('detail');
+}
+
+// ===== Modal backdrop click to close =====
+document.getElementById('hrOverrideModal').addEventListener('click', function(e) {
+  if (e.target === this) closeHROverride();
+});
+
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const incoming = Array.from(e.target.files || []);
+  incoming.forEach(function(file) {
+    const suffix = file.name.split('.').pop().toLowerCase();
+    if(!['pdf', 'docx', 'doc'].includes(suffix)) return;
+    if(file.size > 10 * 1024 * 1024) { alert('文件 "' + file.name + '" 超过 10MB 限制'); return; }
+    if(uploadedFiles.some(f => f.name === file.name && f.size === file.size)) return;
+
+    // Compute MD5 and check cache
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var spark = new SparkMD5.ArrayBuffer();
+      spark.append(ev.target.result);
+      var md5 = spark.end();
+      file._md5 = md5;
+      fetch('/api/resumes/check', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({md5: md5})
+      }).then(function(r) { return r.json(); }).then(function(data) {
+        if(data.success && data.data && data.data.cached) {
+          var d = data.data;
+          var when = new Date(d.created_at * 1000).toLocaleString('zh-CN');
+          if(confirm('简历 "' + d.file_name + '" 已有解析记录（' + when + '），是否直接使用缓存？\n\n点"确定"使用缓存，点"取消"重新解析。')) {
+            file._cached = true;
+            file._cached_md5 = md5;
+          }
+        }
+        uploadedFiles.push(file);
+        renderFiles();
+        updateLaunchCount();
+      }).catch(function() {
+        uploadedFiles.push(file);
+        renderFiles();
+        updateLaunchCount();
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  });
+  e.target.value = '';
+});
+
+// ===== Init =====
+renderReqList();
+loadJobs();
+checkActiveSession();
+renderRecentActivities();
+</script>
+</body>
+</html>
+
+
+

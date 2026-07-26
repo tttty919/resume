@@ -1,0 +1,35 @@
+从简历中提取结构化信息。返回纯 JSON，不要其他文字。
+
+## 规则
+
+1. **技能**：提取所有技术名词（语言、框架、工具、AI/LLM、产品/设计工具、数据工具）。工作经历和项目经历中的技能也要提取，不可遗漏。标准化技能名：如"调过GPT"→"GPT API"、"写prompt"→"Prompt Engineering"、"用AI写代码"→"AI辅助编程"。
+2. **禁止脑补**：简历写"985高校"不要写成"清华大学"，写"BAT"不要写成"阿里巴巴"。不确定填 null。
+3. **逐字摘录**：工作职责和项目描述必须引用原文，不改写、不总结。保留"主导/参与/负责/协助"等措辞。
+4. **学历拆细**：school/major/degree 分别填写。无法确定某一项时填 null。标记"在读"状态。
+5. **信息缺失**：在 extraction_notes 中标注缺失字段和格式异常。
+
+## 输出
+
+{{
+  "basic_info": {{
+    "name": "姓名（未提及填 null）",
+    "school": "学校",
+    "major": "专业",
+    "education": "学历完整原文",
+    "degree": "博士|硕士|本科|大专|null",
+    "work_years": "工作年限（如'3年'，未提及填 null）",
+    "current_role": "当前职位"
+  }},
+  "skills": ["技能1", "技能2"],
+  "work_experiences": [
+    {{"company": "公司名", "role": "职位", "duration": "起止时间", "responsibilities": ["职责原文1", "职责原文2"]}}
+  ],
+  "project_experiences": [
+    {{"name": "项目名", "tech_stack": ["技术"], "description": "项目原文", "responsibility": "个人职责原文"}}
+  ],
+  "extraction_notes": "信息缺失说明"
+}}
+
+## 简历原文
+
+{raw_resume}
