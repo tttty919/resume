@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "ui-designer": {
+      "source": "ccwbb78/design-skills",
+      "sourceType": "github",
+      "skillPath": "ui-designer/SKILL.md",
+      "computedHash": "0ec53a4a28d2370f72cc0826f1f18021f3a2579407d8d27b0d5b9193dd7a0e3f"
+    }
+  }
+}

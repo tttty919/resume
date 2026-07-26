@@ -25,6 +25,63 @@ class ControllerState:
     stop_reason: str = ""                          # 空 = 未停止
     pending_hr_items: list[str] = field(default_factory=list)  # 待HR确认的 requirement_id
 
+class ScreeningAgent:
+    """Minimal controller around the fixed screening workflow.
+
+    Skills still perform the domain work. The controller reads current state and
+    chooses a safe next action: retry unresolved requirements, pause for HR, or
+    continue to risk analysis and recommendation generation.
+    """
+
+    def __init__(self, requirements: list[dict], retry_limit: int = MAX_AUTO_RETRIES):
+        self.requirements = requirements or []
+        self.retry_limit = retry_limit
+        self.state = ControllerState(total_requirements=len(self.requirements))
+
+    def decide_after_match(self, validated_items: list[dict]) -> dict:
+        should_stop, stop_reason, pending_hr = check_stop_condition(validated_items, self.state.retry_count)
+        unresolved = find_unresolved(self.requirements, validated_items)
+
+        if unresolved and self.state.retry_count < self.retry_limit:
+            action = "retry_unresolved"
+            reason = f"{len(unresolved)} unresolved requirement(s); retry targeted matching"
+        elif pending_hr:
+            action = "pause_for_hr"
+            reason = stop_reason
+        else:
+            action = "continue"
+            reason = stop_reason or "all requirements stable"
+
+        self.state.stop_reason = reason
+        self.state.pending_hr_items = pending_hr
+        self.state.last_action = action
+        if not hasattr(self.state, "trace"):
+            self.state.trace = []
+        decision = {
+            "action": action,
+            "reason": reason,
+            "pending_hr": pending_hr,
+            "unresolved": unresolved,
+            "retry_count": self.state.retry_count,
+            "should_stop": should_stop,
+        }
+        self.state.trace.append({
+            "at": now_iso(),
+            "action": action,
+            "reason": reason,
+            "pending_hr": pending_hr,
+            "unresolved_ids": [r.get("id", "") for r in unresolved],
+            "retry_count": self.state.retry_count,
+        })
+        return decision
+
+    def mark_retry(self) -> int:
+        self.state.retry_count += 1
+        return self.state.retry_count
+
+    def decide_after_retry(self, validated_items: list[dict]) -> dict:
+        return self.decide_after_match(validated_items)
+
 
 def check_stop_condition(validated_items: list[dict], retry_count: int = 0) -> tuple[bool, str, list[str]]:
     """判断是否应停止自动处理

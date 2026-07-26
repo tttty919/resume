@@ -64,7 +64,7 @@ async def _process_candidates(sid: str, api_key: str, base_url: str, model: str)
     from backend.workflows.nodes.semantic_matcher import match
     from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
     from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
-    from backend.workflows.controller import check_stop_condition, find_unresolved, ControllerState
+    from backend.workflows.controller import ScreeningAgent
 
     session = get_session(sid)
     if not session:
@@ -79,7 +79,7 @@ async def _process_candidates(sid: str, api_key: str, base_url: str, model: str)
             continue
 
         session.active_idx = slot.index
-        ctrl = ControllerState(total_requirements=len(requirements))
+        agent = ScreeningAgent(requirements)
         tmp_path = None
 
         try:
@@ -160,20 +160,24 @@ async def _process_candidates(sid: str, api_key: str, base_url: str, model: str)
             items = match_result.get("matches", [])
             slot.matches = items
 
-            should_stop, stop_reason, pending_hr = check_stop_condition(items, ctrl.retry_count)
+            decision = agent.decide_after_match(items)
+            should_stop = decision["should_stop"]
+            stop_reason = decision["reason"]
+            pending_hr = decision["pending_hr"]
             emit(sid, "agent_check", {
                 "index": slot.index, "name": slot.name,
+                "action": decision["action"],
                 "should_stop": should_stop, "stop_reason": stop_reason,
-                "pending_hr": pending_hr, "retry_count": ctrl.retry_count,
+                "pending_hr": pending_hr, "retry_count": decision["retry_count"],
             })
 
             # Attempt auto-retry for unresolved must items
-            unresolved = find_unresolved(requirements, items)
-            if unresolved and ctrl.retry_count < 2:
-                ctrl.retry_count += 1
+            unresolved = decision["unresolved"]
+            if decision["action"] == "retry_unresolved":
+                retry_count = agent.mark_retry()
                 emit(sid, "agent_retry", {
                     "index": slot.index, "name": slot.name,
-                    "message": f"Agent: {len(unresolved)} 项要求未解决，重试第 {ctrl.retry_count} 次...",
+                    "message": f"Agent: {len(unresolved)} 项要求未解决，重试第 {retry_count} 次...",
                     "unresolved_ids": [r["id"] for r in unresolved],
                 })
                 retry_result = await match(unresolved, resume_result, text, api_key, base_url, model)
@@ -181,7 +185,16 @@ async def _process_candidates(sid: str, api_key: str, base_url: str, model: str)
                 for item in items:
                     if item.get("requirement_id", "") in retry_map:
                         item.update(retry_map[item["requirement_id"]])
-                should_stop, stop_reason, pending_hr = check_stop_condition(items, ctrl.retry_count)
+                decision = agent.decide_after_retry(items)
+                should_stop = decision["should_stop"]
+                stop_reason = decision["reason"]
+                pending_hr = decision["pending_hr"]
+                emit(sid, "agent_check", {
+                    "index": slot.index, "name": slot.name,
+                    "action": decision["action"],
+                    "should_stop": should_stop, "stop_reason": stop_reason,
+                    "pending_hr": pending_hr, "retry_count": decision["retry_count"],
+                })
 
             # If agent says stop and HR needed, pause this candidate
             if should_stop and pending_hr:

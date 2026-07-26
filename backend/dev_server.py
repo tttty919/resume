@@ -314,6 +314,7 @@ async def extract_resume(
                 "text_length": len(text),
                 "images_count": images_count,
                 "extracted": result,
+                "raw_text": text,
             },
         ).model_dump()
 
@@ -895,6 +896,7 @@ async def pipeline(request: Request):
         from backend.workflows.nodes.semantic_matcher import match
         from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
         from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+        from backend.workflows.controller import ScreeningAgent
 
         pipeline_log = []
 
@@ -1700,6 +1702,7 @@ async def screen_session(
     from backend.agent.session import _sessions, _event_queues
     sid = uuid.uuid4().hex[:12]
     session = AgentSession(id=sid)
+    session.job_id = job_id
     _sessions[sid] = session
     _event_queues[sid] = asyncio.Queue()
     emit(sid, "session_created", {"session_id": sid, "total": len(file_records)})
@@ -1801,6 +1804,42 @@ async def screen_session(
                 slot.status = "matching"
                 match_result = await match(requirements_local, resume_result, slot.raw_text, api_key, base_url, model)
                 slot.matches = match_result.get("matches", [])
+                agent = ScreeningAgent(requirements_local)
+                decision = agent.decide_after_match(slot.matches)
+                emit(sid, "agent_check", {
+                    "index": idx,
+                    "name": slot.name,
+                    "action": decision["action"],
+                    "should_stop": decision["should_stop"],
+                    "stop_reason": decision["reason"],
+                    "pending_hr": decision["pending_hr"],
+                    "retry_count": decision["retry_count"],
+                })
+                if decision["action"] == "retry_unresolved":
+                    unresolved = decision["unresolved"]
+                    retry_count = agent.mark_retry()
+                    emit(sid, "agent_retry", {
+                        "index": idx,
+                        "name": slot.name,
+                        "message": f"Agent: {len(unresolved)} 项要求未解决，重试第 {retry_count} 次...",
+                        "unresolved_ids": [r.get("id", "") for r in unresolved],
+                    })
+                    retry_result = await match(unresolved, resume_result, slot.raw_text, api_key, base_url, model)
+                    retry_map = {m.get("requirement_id", ""): m for m in retry_result.get("matches", [])}
+                    for item in slot.matches:
+                        rid = item.get("requirement_id", "")
+                        if rid in retry_map:
+                            item.update(retry_map[rid])
+                    decision = agent.decide_after_retry(slot.matches)
+                    emit(sid, "agent_check", {
+                        "index": idx,
+                        "name": slot.name,
+                        "action": decision["action"],
+                        "should_stop": decision["should_stop"],
+                        "stop_reason": decision["reason"],
+                        "pending_hr": decision["pending_hr"],
+                        "retry_count": decision["retry_count"],
+                    })
 
                 # Risk analysis
                 emit(sid, "progress", {"step": "resume_step", "index": idx, "total": total,
@@ -1913,7 +1952,15 @@ async def session_status(sid: str):
         candidates_status.append({
             "index": c.index,
             "name": c.name,
+            "file_name": c.file_name,
             "status": c.status,
+            "resume": c.resume,
+            "raw_text": c.raw_text,
+            "matches": c.matches,
+            "analysis": c.analysis,
+            "scoring": c.scoring,
+            "stop_reason": getattr(c, "stop_reason", ""),
+            "pending_hr": getattr(c, "pending_hr", []),
             "score": sc.get("overall_score") if isinstance(sc, dict) else None,
             "tier": sc.get("tier_label", "") if isinstance(sc, dict) else "",
         })
@@ -1921,6 +1968,8 @@ async def session_status(sid: str):
     return {
         "success": True,
         "session_id": sid,
+        "job_id": getattr(session, "job_id", ""),
+        "requirements": session.requirements,
         "total": len(session.candidates),
         "completed": sum(1 for c in session.candidates if c.status in ("done", "error")),
         "candidates": candidates_status,
