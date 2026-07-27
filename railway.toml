@@ -1,0 +1,6 @@
+[build]
+builder = "docker"
+
+[deploy]
+healthcheckPath = "/"
+restartPolicyMaxRetries = 3

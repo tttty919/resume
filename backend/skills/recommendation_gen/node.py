@@ -9,9 +9,9 @@ import json
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.core.exceptions import ParseException
-from backend.schemas.output_schemas import RecommendationGenOutput
+from backend.skills.recommendation_gen.schema import RecommendationGenOutput
 from backend.utils.llm_utils import create_llm, load_prompt, parse_llm_json, safe_pydantic_validate
-from backend.utils.scoring_engine import score_matches
+from backend.skills.recommendation_gen.scoring_engine import score_matches
 
 
 async def generate(
@@ -38,7 +38,7 @@ async def generate(
 
     # Step 2: LLM — 文本润色
     llm = create_llm(api_key=api_key, base_url=base_url, model=model)
-    prompt_text = load_prompt("recommendation_gen.txt")
+    prompt_text = load_prompt("skills/recommendation_gen/prompt.txt")
     prompt = ChatPromptTemplate.from_template(prompt_text)
     chain = prompt | llm
 

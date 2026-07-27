@@ -4,7 +4,7 @@
 # Uploaded resumes
 uploads/
 
-# Data (SQLite, knowledge files, job data)
+# Data (SQLite, knowledge files, job data) — now per-space: data/{space}/
 data/
 
 # Tests — only exclude resume data, keep eval scripts & labels

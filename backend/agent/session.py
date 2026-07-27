@@ -35,9 +35,11 @@ class AgentSession:
     requirements: list = field(default_factory=list)
     candidates: list[CandidateSlot] = field(default_factory=list)
     active_idx: int = -1
-    phase: str = "init"            # init | processing | waiting_hr | done
+    phase: str = "init"            # init | processing | waiting_hr | done | cancelled
     created_at: str = ""
     events: list = field(default_factory=list)  # (event_type, payload) tuples for replay
+    task: "asyncio.Task | None" = field(default=None, repr=False, compare=False)
+    cancelled: bool = False
 
     def __post_init__(self):
         if not self.created_at:

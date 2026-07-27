@@ -2,13 +2,25 @@
 
 import hashlib
 import json
+import re
 import sqlite3
 import time
 from pathlib import Path
 
 from backend.core.logger import get_logger
 
-_DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "resume_cache.db"
+
+def _db_path() -> Path:
+    """Space-aware DB path. Falls back to 'default' if space not in context."""
+    try:
+        from backend.utils.space import get_space
+        space = get_space()
+    except Exception:
+        space = "default"
+    safe = re.sub(r"[^a-zA-Z0-9_-]", "_", space) or "default"
+    p = Path(__file__).resolve().parent.parent.parent / "data" / safe / "resume_cache.db"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS resume_cache (
@@ -31,8 +43,8 @@ log = get_logger()
 
 
 def _get_conn() -> sqlite3.Connection:
-    _DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(_DB_PATH))
+    db_path = _db_path()
+    conn = sqlite3.connect(str(db_path))
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute(_CREATE_TABLE)
     _run_migrations(conn)

@@ -61,9 +61,9 @@ async def _call_llm(prompt_file: str, template_vars: dict, api_key: str, base_ur
 
 async def _process_candidates(sid: str, api_key: str, base_url: str, model: str):
     """Background task: process each candidate through the agent pipeline."""
-    from backend.workflows.nodes.semantic_matcher import match
-    from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
-    from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+    from backend.skills.semantic_matcher.node import match
+    from backend.skills.risk_analyzer.node import analyze as analyze_risk
+    from backend.skills.recommendation_gen.node import generate as generate_recommendation
     from backend.workflows.controller import ScreeningAgent
 
     session = get_session(sid)
@@ -91,7 +91,8 @@ async def _process_candidates(sid: str, api_key: str, base_url: str, model: str)
             else:
                 emit(sid, "progress", {"step": "resume_step", "index": slot.index, "total": len(session.candidates),
                     "sub_step": "文档解析", "message": f"正在处理: {slot.file_name} — 文档解析..."})
-                upload_dir = Path(settings.app.upload_dir)
+                from backend.utils.space import upload_dir as _space_upload
+                upload_dir = _space_upload()
                 files_found = list(upload_dir.glob(f"agent_{slot.index}_*"))
                 if files_found:
                     tmp_path = files_found[0]
@@ -136,7 +137,7 @@ async def _process_candidates(sid: str, api_key: str, base_url: str, model: str)
                 else:
                     emit(sid, "progress", {"step": "resume_step", "index": slot.index, "total": len(session.candidates),
                         "sub_step": "简历提取", "message": f"正在处理: {slot.name or slot.file_name} — 简历提取..."})
-                    resume_result = await _call_llm("resume_extractor.txt", {"raw_resume": text}, api_key, base_url, model)
+                    resume_result = await _call_llm("skills/resume_extractor/prompt.txt", {"raw_resume": text}, api_key, base_url, model)
                     if not isinstance(resume_result, dict):
                         raise RuntimeError(f"LLM 返回类型异常: {type(resume_result)}")
                     # Save to cache
@@ -287,7 +288,7 @@ async def agent_start(
     # ---- JD parse ----
     try:
         jd_clean = clean_text(jd_text, "jd")
-        jd_result = await _call_llm("jd_parser.txt", {"raw_jd": jd_clean}, api_key, base_url, model)
+        jd_result = await _call_llm("skills/jd_parser/prompt.txt", {"raw_jd": jd_clean}, api_key, base_url, model)
         requirements = jd_result.get("requirements", [])
     except Exception as e:
         return {"success": False, "message": f"JD 解析失败: {e}"}
@@ -301,8 +302,8 @@ async def agent_start(
             pass
 
     # ---- Save files ----
-    upload_dir = Path(settings.app.upload_dir)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    from backend.utils.space import upload_dir as _space_upload
+    upload_dir = _space_upload()
     candidate_names = []
     for idx, file in enumerate(files):
         fname = file.filename or f"resume_{idx}"
@@ -377,7 +378,7 @@ async def agent_resume(sid: str, request: Request):
     Reconnect to GET /stream/{sid} to get new events.
     """
     from backend.workflows.controller import rerun_affected
-    from backend.workflows.nodes.semantic_matcher import match
+    from backend.skills.semantic_matcher.node import match
 
     session = get_session(sid)
     if not session:

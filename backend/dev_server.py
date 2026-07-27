@@ -27,7 +27,7 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from fastapi import FastAPI, Request, UploadFile, File, Form
-from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse, JSONResponse
 from starlette.responses import Response
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -57,6 +57,38 @@ app.include_router(agent_router)
 # ── Screening router ─────────────────────────────────────────
 from backend.screening.router import router as screening_router
 app.include_router(screening_router)
+
+# ── Chat (conversational agent) router ────────────────────────
+from backend.chat.router import router as chat_router
+app.include_router(chat_router)
+
+
+# ── Multi-tenant space isolation ────────────────────────────
+from backend.utils.space import get_space, set_space, space_dir, upload_dir as _upload_dir
+
+
+@app.middleware("http")
+async def space_middleware(request: Request, call_next):
+    """Extract X-Space header or ?space= query param into ContextVar."""
+    space = (
+        request.headers.get("X-Space") or
+        request.query_params.get("space") or
+        "default"
+    )
+    set_space(space)
+    response = await call_next(request)
+    return response
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Seed ChromaDB synonym data on first startup."""
+    try:
+        from backend.rag.seed_data import seed
+        count = seed(clear_first=False)
+        log.info(f"ChromaDB 就绪: {count} 条同义词记录")
+    except Exception as e:
+        log.warning(f"ChromaDB 种子化失败（不影响核心功能）: {e}")
 
 
 # ── 通用 LLM 调用 ─────────────────────────────────────────
@@ -207,7 +239,7 @@ async def parse_jd(request: Request):
 
     try:
         raw_jd = clean_text(raw_jd, "jd")
-        result = await _call_llm_async("jd_parser.txt", {"raw_jd": raw_jd}, api_key, base_url, model)
+        result = await _call_llm_async("skills/jd_parser/prompt.txt", {"raw_jd": raw_jd}, api_key, base_url, model)
         result = _ensure_jd_parse(raw_jd, result)
         log.info(f"JDParser 成功: {len(result.get('requirements', []))} 条要求")
         return APIResponse(success=True, data=result).model_dump()
@@ -233,7 +265,7 @@ async def judge_jd(request: Request):
 
     try:
         result = await _call_llm_async(
-            "jd_judge.txt",
+            "skills/jd_parser/judge_prompt.txt",
             {"raw_jd": raw_jd, "parser_output": json.dumps(parser_output, ensure_ascii=False, indent=2)},
             api_key, base_url, model
         )
@@ -268,8 +300,7 @@ async def extract_resume(
     if suffix not in (".pdf", ".docx", ".doc"):
         return APIResponse(success=False, message=f"不支持的文件格式: {suffix}，支持 PDF/DOCX").model_dump()
 
-    upload_dir = Path(settings.app.upload_dir)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    upload_dir = _upload_dir()
     tmp_path = upload_dir / f"tmp_{file.filename}"
     try:
         with open(tmp_path, "wb") as f:
@@ -294,7 +325,7 @@ async def extract_resume(
 
             # Step 2: Skill 2 — LLM 提取
             log.info(f"Skill 2 开始提取: {file.filename} ({len(text)} chars)")
-            result = await _call_llm_async("resume_extractor.txt", {"raw_resume": text}, api_key, base_url, model)
+            result = await _call_llm_async("skills/resume_extractor/prompt.txt", {"raw_resume": text}, api_key, base_url, model)
 
             # Save to cache
             try:
@@ -345,7 +376,7 @@ async def extract_resume_text(request: Request):
 
     try:
         raw_resume = clean_text(raw_resume, "resume")
-        result = await _call_llm_async("resume_extractor.txt", {"raw_resume": raw_resume}, api_key, base_url, model)
+        result = await _call_llm_async("skills/resume_extractor/prompt.txt", {"raw_resume": raw_resume}, api_key, base_url, model)
         name = result.get("basic_info", {}).get("name", "未知")
         log.info(f"ResumeExtractor(文本) 成功: {name}")
         return APIResponse(success=True, data=result).model_dump()
@@ -387,7 +418,7 @@ async def semantic_match(request: Request):
         return APIResponse(success=False, message="请填写 API Key").model_dump()
 
     try:
-        from backend.workflows.nodes.semantic_matcher import match
+        from backend.skills.semantic_matcher.node import match
         log.info(f"SemanticMatcher 开始: {len(requirements)} 条要求, 候选人 {resume.get('basic_info', {}).get('name', '?') if isinstance(resume, dict) else '?'}")
         result = await match(requirements, resume, raw_resume_text, api_key, base_url, model)
         matches = result.get("matches", [])
@@ -423,7 +454,7 @@ async def judge_evidence(request: Request):
 
     try:
         result = await _call_llm_async(
-            "evidence_judge.txt",
+            "skills/semantic_matcher/judge_prompt.txt",
             {
                 "raw_resume": raw_resume,
                 "matches_json": json.dumps(matches, ensure_ascii=False, indent=2),
@@ -470,7 +501,7 @@ async def analyze_risk(request: Request):
             return APIResponse(success=False, message="validated_items JSON 解析失败").model_dump()
 
     try:
-        from backend.workflows.nodes.risk_analyzer import analyze
+        from backend.skills.risk_analyzer.node import analyze
         log.info(f"RiskAnalyzer 开始: {len(requirements)} 条要求, {len(validated_items)} 项证据")
         result = await analyze(requirements, validated_items, api_key, base_url, model)
         analysis = result.get("analysis", {})
@@ -506,7 +537,7 @@ async def judge_risk(request: Request):
 
     try:
         result = await _call_llm_async(
-            "risk_judge.txt",
+            "skills/risk_analyzer/judge_prompt.txt",
             {
                 "validated_items_json": json.dumps(validated_items, ensure_ascii=False, indent=2),
                 "analyzer_output": json.dumps(analyzer_output, ensure_ascii=False, indent=2),
@@ -561,7 +592,7 @@ async def judge_recommendation(request: Request):
 
     try:
         result = await _call_llm_async(
-            "recommendation_judge.txt",
+            "skills/recommendation_gen/judge_prompt.txt",
             {
                 "requirements_json": json.dumps(requirements, ensure_ascii=False, indent=2),
                 "validated_items_json": json.dumps(validated_items, ensure_ascii=False, indent=2),
@@ -634,7 +665,7 @@ async def generate_recommendation(request: Request):
             return APIResponse(success=False, message="risk_analysis JSON 解析失败").model_dump()
 
     try:
-        from backend.workflows.nodes.recommendation_gen import generate
+        from backend.skills.recommendation_gen.node import generate
         log.info(f"RecommendationGen 开始: {len(matches)} 匹配项 → 规则评分 → LLM 推荐")
         result = await generate(requirements, matches, validated_items, risk_analysis, api_key, base_url, model)
         s = result.get("scoring", {})
@@ -664,30 +695,34 @@ async def feedback(request: Request):
     if not new_synonym:
         return APIResponse(success=False, message="synonym 不能为空").model_dump()
 
-    from backend.tools.query_expander import learn
+    from backend.skills.semantic_matcher.tools import learn
     result = learn(requirement_name, new_synonym)
     return APIResponse(success=result["added"], message=result["message"], data=result).model_dump()
 
 
-# ── 岗位 CRUD (JSON 文件持久化) ───────────────────────
+# ── 岗位 CRUD (JSON 文件持久化，按空间隔离) ──────────────────
 
-_JOBS_FILE = Path(__file__).parent.parent / "data" / "jobs.json"
+def _jobs_file() -> Path:
+    return space_dir() / "jobs.json"
+
 _job_resume_counts: dict[str, int] = {}
 _job_screened_counts: dict[str, int] = {}
 
 
 def _load_jobs() -> list[dict]:
-    if _JOBS_FILE.exists():
+    jf = _jobs_file()
+    if jf.exists():
         try:
-            return json.loads(_JOBS_FILE.read_text(encoding="utf-8"))
+            return json.loads(jf.read_text(encoding="utf-8"))
         except Exception:
             pass
     return []
 
 
 def _save_jobs(jobs: list[dict]) -> None:
-    _JOBS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    _JOBS_FILE.write_text(json.dumps(jobs, ensure_ascii=False, indent=2), encoding="utf-8")
+    jf = _jobs_file()
+    jf.parent.mkdir(parents=True, exist_ok=True)
+    jf.write_text(json.dumps(jobs, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 @app.get("/api/jobs")
@@ -893,9 +928,9 @@ async def pipeline(request: Request):
         return APIResponse(success=False, message="请填写 API Key").model_dump()
 
     try:
-        from backend.workflows.nodes.semantic_matcher import match
-        from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
-        from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+        from backend.skills.semantic_matcher.node import match
+        from backend.skills.risk_analyzer.node import analyze as analyze_risk
+        from backend.skills.recommendation_gen.node import generate as generate_recommendation
         from backend.workflows.controller import ScreeningAgent
 
         pipeline_log = []
@@ -911,7 +946,7 @@ async def pipeline(request: Request):
         else:
             log.info("Pipeline Step 1/5: JDParser")
             jd_text = clean_text(jd_text, "jd")
-            jd_result = await _call_llm_async("jd_parser.txt", {"raw_jd": jd_text}, api_key, base_url, model)
+            jd_result = await _call_llm_async("skills/jd_parser/prompt.txt", {"raw_jd": jd_text}, api_key, base_url, model)
             jd_result = _ensure_jd_parse(jd_text, jd_result)
             requirements = jd_result.get("requirements", [])
             pipeline_log.append(f"JDParser: {len(requirements)} 条要求")
@@ -919,7 +954,7 @@ async def pipeline(request: Request):
         # Step 2: ResumeExtractor
         log.info("Pipeline Step 2/5: ResumeExtractor")
         resume_text = clean_text(resume_text, "resume")
-        resume_result = await _call_llm_async("resume_extractor.txt", {"raw_resume": resume_text}, api_key, base_url, model)
+        resume_result = await _call_llm_async("skills/resume_extractor/prompt.txt", {"raw_resume": resume_text}, api_key, base_url, model)
         name = resume_result.get("basic_info", {}).get("name", "未知")
         pipeline_log.append(f"ResumeExtractor: {name}, {len(resume_result.get('skills', []))} 技能")
 
@@ -990,18 +1025,17 @@ async def screen(
     if not api_key:
         return APIResponse(success=False, message="请填写 API Key").model_dump()
 
-    from backend.workflows.nodes.semantic_matcher import match
-    from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
-    from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+    from backend.skills.semantic_matcher.node import match
+    from backend.skills.risk_analyzer.node import analyze as analyze_risk
+    from backend.skills.recommendation_gen.node import generate as generate_recommendation
 
-    upload_dir = Path(settings.app.upload_dir)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    upload_dir = _upload_dir()
 
     # JD 解析（只跑一次）
     jd_text = clean_text(jd_text, "jd")
     log.info(f"全流程筛选: 解析 JD ({len(jd_text)} chars)")
     try:
-        jd_result = await _call_llm_async("jd_parser.txt", {"raw_jd": jd_text}, api_key, base_url, model)
+        jd_result = await _call_llm_async("skills/jd_parser/prompt.txt", {"raw_jd": jd_text}, api_key, base_url, model)
         jd_result = _ensure_jd_parse(jd_text, jd_result)
         requirements = jd_result.get("requirements", [])
         log.info(f"JD 解析完成: {len(requirements)} 条要求")
@@ -1044,7 +1078,7 @@ async def screen(
                         return {"file_name": filename, "error": "文档解析结果为空"}
 
                     # Skill 2: 简历提取
-                    resume_result = await _call_llm_async("resume_extractor.txt", {"raw_resume": text}, api_key, base_url, model)
+                    resume_result = await _call_llm_async("skills/resume_extractor/prompt.txt", {"raw_resume": text}, api_key, base_url, model)
                     try:
                         cache_save(str(tmp_path), text, resume_result)
                     except Exception as e:
@@ -1167,8 +1201,7 @@ async def screen_stream(
     if not api_key:
         return _err("请填写 API Key")
 
-    upload_dir = Path(settings.app.upload_dir)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    upload_dir = _upload_dir()
 
     # 先保存所有文件（UploadFile 在 StreamingResponse 里可能已关闭）
     total = len(files)
@@ -1199,7 +1232,7 @@ async def screen_stream(
             yield _sse("progress", {"step": "jd_parse", "message": "正在解析 JD...", "index": 0, "total": total})
             try:
                 jd_text_clean = clean_text(jd_text, "jd")
-                jd_result = await _call_llm_async("jd_parser.txt", {"raw_jd": jd_text_clean}, api_key, base_url, model)
+                jd_result = await _call_llm_async("skills/jd_parser/prompt.txt", {"raw_jd": jd_text_clean}, api_key, base_url, model)
                 jd_result = _ensure_jd_parse(jd_text_clean, jd_result)
                 parsed_reqs = jd_result.get("requirements", [])
                 yield _sse("progress", {"step": "jd_done", "message": f"JD 解析完成：{len(parsed_reqs)} 条要求", "requirements": parsed_reqs})
@@ -1238,7 +1271,7 @@ async def screen_stream(
                         await event_queue.put(_sse("progress", {"step": "resume_step", "index": idx, "total": total,
                             "sub_step": "简历提取", "message": f"[{idx+1}/{total}] {filename} — LLM 简历提取..."}))
 
-                        resume_result = await _call_llm_async("resume_extractor.txt", {"raw_resume": text}, api_key, base_url, model)
+                        resume_result = await _call_llm_async("skills/resume_extractor/prompt.txt", {"raw_resume": text}, api_key, base_url, model)
                         try:
                             cache_save(str(tmp_path), text, resume_result)
                         except Exception:
@@ -1334,9 +1367,9 @@ async def analyze_stream(request: Request):
     if not api_key:
         return Response(content="data: {\"error\":\"请填写 API Key\"}\n\n", media_type="text/event-stream")
 
-    from backend.workflows.nodes.semantic_matcher import match
-    from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
-    from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+    from backend.skills.semantic_matcher.node import match
+    from backend.skills.risk_analyzer.node import analyze as analyze_risk
+    from backend.skills.recommendation_gen.node import generate as generate_recommendation
 
     total = len(candidates)
     concurrency = max(1, min(concurrency, 5))
@@ -1464,13 +1497,12 @@ async def screen_agent(
     if not api_key:
         return Response(content="data: {\"error\":\"请填写 API Key\"}\n\n", media_type="text/event-stream")
 
-    from backend.workflows.nodes.semantic_matcher import match
-    from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
-    from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+    from backend.skills.semantic_matcher.node import match
+    from backend.skills.risk_analyzer.node import analyze as analyze_risk
+    from backend.skills.recommendation_gen.node import generate as generate_recommendation
     from backend.workflows.controller import check_stop_condition, find_unresolved, ControllerState
 
-    upload_dir = Path(settings.app.upload_dir)
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    upload_dir = _upload_dir()
 
     async def event_stream():
         total = len(files)
@@ -1479,7 +1511,7 @@ async def screen_agent(
         yield _sse("progress", {"step": "jd_parse", "message": "正在解析 JD...", "index": 0, "total": total})
         try:
             jd_text_clean = clean_text(jd_text, "jd")
-            jd_result = _call_llm("jd_parser.txt", {"raw_jd": jd_text_clean}, api_key, base_url, model)
+            jd_result = _call_llm("skills/jd_parser/prompt.txt", {"raw_jd": jd_text_clean}, api_key, base_url, model)
             requirements = jd_result.get("requirements", [])
             yield _sse("progress", {"step": "jd_done", "message": f"JD 解析完成：{len(requirements)} 条要求", "requirements": requirements})
         except Exception as e:
@@ -1520,7 +1552,7 @@ async def screen_agent(
                     yield _sse("progress", {"step": "resume_step", "index": idx, "total": total,
                         "sub_step": "简历提取", "message": f"正在处理简历 {idx+1}/{total}: {filename} — 简历提取..."})
 
-                    resume_result = await _call_llm_async("resume_extractor.txt", {"raw_resume": text}, api_key, base_url, model)
+                    resume_result = await _call_llm_async("skills/resume_extractor/prompt.txt", {"raw_resume": text}, api_key, base_url, model)
                     try:
                         cache_save(str(tmp_path), text, resume_result)
                     except Exception as e:
@@ -1708,9 +1740,10 @@ async def screen_session(
     emit(sid, "session_created", {"session_id": sid, "total": len(file_records)})
 
     async def background_pipeline():
-        from backend.workflows.nodes.semantic_matcher import match
-        from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
-        from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+        from backend.skills.semantic_matcher.node import match
+        from backend.skills.risk_analyzer.node import analyze as analyze_risk
+        from backend.skills.recommendation_gen.node import generate as generate_recommendation
+        from backend.workflows.controller import ScreeningAgent
 
         session = get_session(sid)
         total = len(file_records)
@@ -1724,7 +1757,7 @@ async def screen_session(
                 requirements_local = []
         if not requirements_local and jd_text.strip():
             try:
-                from backend.workflows.nodes.jd_parser import parse
+                from backend.skills.jd_parser.node import parse
                 jd_result = await parse(jd_text.strip(), api_key, base_url, model)
                 requirements_local = jd_result.get("requirements", [])
             except Exception as e:
@@ -1772,7 +1805,7 @@ async def screen_session(
                         "sub_step": "文档解析", "message": f"[{idx+1}/{total}] {filename} — 文档解析..."})
                     slot.status = "document_parsing"
 
-                    text = await asyncio.to_thread(document_parser, str(tmp_path))
+                    text, _ = document_parser.parse(str(tmp_path))
                     text = clean_text(text)
                     slot.raw_text = text
 
@@ -1783,7 +1816,7 @@ async def screen_session(
                             "sub_step": "简历提取", "message": f"[{idx+1}/{total}] {filename} — 缓存命中，跳过提取"})
                         resume_result = cached.get("parsed_resume", {})
                     else:
-                        from backend.workflows.nodes.resume_extractor import extract as extract_resume
+                        from backend.skills.resume_extractor.node import extract as extract_resume
                         emit(sid, "progress", {"step": "resume_step", "index": idx, "total": total,
                             "sub_step": "简历提取", "message": f"[{idx+1}/{total}] {filename} — LLM 简历提取..."})
                         slot.status = "resume_extraction"
@@ -1890,7 +1923,18 @@ async def screen_session(
                     tmp_path.unlink()
 
         tasks = [asyncio.create_task(process_one(rec)) for rec in file_records]
-        await asyncio.gather(*tasks, return_exceptions=True)
+        try:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        except asyncio.CancelledError:
+            for t in tasks:
+                t.cancel()
+            session.phase = "cancelled"
+            emit(sid, "cancelled", {"message": "任务已取消"})
+            log.info(f"[Session {sid}] 已取消")
+            return
+
+        if session.cancelled:
+            return
 
         emit(sid, "complete", {
             "message": f"全部分析完成：{total} 位候选人",
@@ -1899,7 +1943,7 @@ async def screen_session(
         })
         log.info(f"[Session {sid}] 全部完成")
 
-    asyncio.create_task(background_pipeline())
+    session.task = asyncio.create_task(background_pipeline())
     return {"success": True, "session_id": sid}
 
 
@@ -1927,7 +1971,7 @@ async def session_stream(sid: str):
                 evt_type, payload = await asyncio.wait_for(q.get(), timeout=30.0)
                 yield _sse(evt_type, payload)
                 sent_count += 1
-                if evt_type == "complete":
+                if evt_type in ("complete", "cancelled", "error"):
                     break
             except asyncio.TimeoutError:
                 yield _sse("heartbeat", {"message": "等待中..."})
@@ -1969,11 +2013,27 @@ async def session_status(sid: str):
         "success": True,
         "session_id": sid,
         "job_id": getattr(session, "job_id", ""),
+        "phase": getattr(session, "phase", ""),
+        "cancelled": getattr(session, "cancelled", False),
         "requirements": session.requirements,
         "total": len(session.candidates),
         "completed": sum(1 for c in session.candidates if c.status in ("done", "error")),
         "candidates": candidates_status,
     }
+
+
+@app.post("/api/session/{sid}/cancel")
+async def session_cancel(sid: str):
+    """Cancel a running screening session's background task."""
+    session = get_session(sid)
+    if not session:
+        return JSONResponse({"success": False, "message": "会话不存在或已过期"}, status_code=404)
+
+    task = getattr(session, "task", None)
+    if task and not task.done():
+        task.cancel()
+    session.cancelled = True
+    return {"success": True, "session_id": sid, "cancelled": True}
 
 
 # ── 静态文件 ────────────────────────────────────────────────
@@ -1985,6 +2045,9 @@ async def index():
 
 if __name__ == "__main__":
     import uvicorn
-    print(f"\n  F1 Skill 开发服务器启动: http://127.0.0.1:{settings.app.dev_port}")
+    # Railway / cloud platforms inject PORT env var; use it if present
+    port = int(_os.environ.get("PORT", settings.app.dev_port))
+    host = _os.environ.get("HOST", "0.0.0.0")
+    print(f"\n  F1 Skill 服务器启动: http://{host}:{port}")
     print(f"  API Key: {'已配置' if settings.deepseek.api_key else '未配置（需在前端填写）'}")
-    uvicorn.run(app, host=settings.app.host, port=settings.app.dev_port, workers=1, timeout_keep_alive=600)
+    uvicorn.run(app, host=host, port=port, workers=1, timeout_keep_alive=600)

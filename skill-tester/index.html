@@ -46,6 +46,7 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .btn{border:none;cursor:pointer;padding:11px 16px;border-radius:999px;font-weight:800;font-size:13px;transition:.15s}
 .btn:hover{transform:translateY(-1px)}
 .primary{background:var(--accent);color:#fff;box-shadow:0 12px 24px rgba(217,119,87,.16)}
+.btn.ghost,label.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .ghost{background:#fff;border:1px solid var(--line);color:#57534E}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid var(--line);color:#57534E;font-weight:700;font-size:13px}
 .tag-must{background:rgba(217,119,87,.12);color:#B4472C;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
@@ -103,7 +104,7 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .file-card span{color:var(--muted);font-size:12px}
 .file-del{border:none;background:rgba(220,38,38,.12);color:var(--danger);border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer;font-size:12px}
 .jd-panel{margin-top:18px}
-.jd-panel textarea{width:100%;border:1px solid var(--line);border-radius:18px;padding:14px;font:inherit;line-height:1.7;background:rgba(255,255,255,.82);outline:none;color:var(--text);min-height:160px;resize:vertical}
+.jd-panel textarea{width:100%;border:1px solid var(--line);border-radius:18px;padding:14px;font:inherit;line-height:1.7;background:rgba(255,255,255,.82);outline:none;color:var(--text);min-height:380px;resize:vertical}
 
 /* ===== Page 4: Loading ===== */
 .loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:500px;gap:24px}
@@ -250,6 +251,25 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .agent-questions{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);display:grid;gap:6px}
 .agent-question{font-size:12px;line-height:1.55;color:var(--text);padding:8px 10px;border-radius:10px;background:#fff;border:1px solid var(--line)}
 .agent-question-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}
+.chat-card{margin-bottom:18px}
+.chat-messages{max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px 14px}
+.chat-bubble{max-width:78%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+.chat-bubble.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.chat-bubble.assistant{align-self:flex-start;background:#FFF8F4;border:1px solid rgba(217,119,87,.14);color:var(--text);border-bottom-left-radius:4px}
+.chat-bubble.notice{align-self:center;color:var(--muted);font-size:12px;background:rgba(120,113,108,.06);border-radius:999px;padding:6px 14px;max-width:90%;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px}
+.chat-bubble.notice .chat-nav-btn,.chat-bubble.notice .chat-cancel-btn{margin-top:0}
+.chat-bubble .chat-nav-btn,.chat-bubble .chat-cancel-btn{display:inline-block;margin-top:8px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer}
+.chat-bubble .chat-nav-btn{background:var(--accent);color:#fff;margin-right:8px}
+.chat-bubble .chat-cancel-btn{background:#fff;border:1px solid var(--line);color:var(--muted)}
+.chat-dropzone{border:1.5px dashed rgba(120,113,108,.22);border-radius:14px;padding:10px;transition:.2s}
+.chat-dropzone.drag-over{border-color:var(--accent);background:rgba(255,240,235,.5)}
+.chat-attachments{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.chat-attachments:empty{margin-bottom:0}
+.chat-attachment-tag{font-size:11px;padding:4px 10px;border-radius:999px;background:rgba(217,119,87,.08);color:var(--accent);display:inline-flex;align-items:center;gap:6px}
+.chat-attachment-tag .remove{cursor:pointer;font-weight:900}
+.chat-input-row{display:flex;gap:8px}
+.chat-input-row input{flex:1;padding:11px 14px;border-radius:999px;border:1px solid var(--line);font-size:13px;background:#fff}
+.chat-input-row input:focus{border-color:var(--accent);outline:none}
 .results-job-badge{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;background:rgba(217,119,87,.08);border:1px solid rgba(217,119,87,.18);font-size:13px;font-weight:700;color:var(--accent);margin-bottom:14px}
 .compare-bar{display:none;align-items:center;gap:12px;padding:12px 16px;border-radius:18px;background:rgba(255,255,255,.6);border:1px solid var(--line);margin-bottom:16px}
 .compare-bar .compare-count{font-size:13px;color:var(--muted)}
@@ -516,6 +536,19 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .modal-subtitle{margin-top:6px;font-size:13px;color:var(--muted);line-height:1.6}
 .modal-content{padding:24px 28px;max-height:calc(88vh - 90px);overflow-y:auto}
 
+/* Space Entry Modal */
+.space-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);z-index:10000;align-items:center;justify-content:center}
+.space-overlay.show{display:flex}
+.space-dialog{background:#fff;border-radius:22px;border:1px solid var(--line);box-shadow:0 32px 80px rgba(0,0,0,.12);padding:32px 28px;max-width:420px;width:92%;text-align:center}
+.space-dialog h3{font-size:18px;margin-bottom:6px}
+.space-dialog p{color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.6}
+.space-dialog input{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);font:inherit;font-size:15px;outline:none;text-align:center}
+.space-dialog input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(217,119,87,.10)}
+.space-dialog .btn{margin-top:14px;width:100%}
+.space-hint{font-size:11px;color:var(--muted);margin-top:10px}
+.space-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(217,119,87,.08);color:var(--accent);font-weight:700;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;border:1px solid rgba(217,119,87,.14);transition:.15s}
+.space-badge:hover{background:rgba(217,119,87,.14)}
+
 /* Jobs Page Enhanced */
 .jobs-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .jobs-search{flex:1;min-width:200px;padding:12px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.72);font:inherit;outline:none;font-size:14px}
@@ -704,6 +737,7 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
   <div class="main">
     <div class="topbar">
       <div class="crumb" id="breadcrumb">工作台</div>
+      <div class="space-badge" id="spaceBadge" title="点击切换工作区" onclick="switchSpace()" style="display:none"></div>
     </div>
     <div class="content">
 
@@ -725,6 +759,24 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
             <div class="card stat-card"><div class="k">平均匹配度</div><div class="v" id="dashAvgScore">—</div><div class="l" id="dashScoreDetail">暂无筛选结果</div></div>
           </div>
         </div>
+
+        <div class="card chat-card" id="dashChatCard">
+          <h4>智能助理 <span style="font-size:11px;font-weight:400;color:var(--muted);cursor:pointer;float:right" onclick="clearChatMessages()" title="清空对话上下文">清空对话</span></h4>
+          <div class="chat-messages" id="chatMessages"></div>
+          <div class="chat-dropzone" id="chatDropZone"
+               ondragover="handleChatDragOver(event)"
+               ondragleave="handleChatDragLeave(event)"
+               ondrop="handleChatDrop(event)">
+            <div class="chat-attachments" id="chatAttachments"></div>
+            <div class="chat-input-row">
+              <input type="text" id="chatInput" placeholder='说说你想做什么，比如"这是JD帮我录入"、"这10份简历和XX岗位匹配一下出报告"…' onkeydown="handleChatInputKeydown(event)" />
+              <label class="btn ghost" for="chatFileInput">附件</label>
+              <button class="btn primary" onclick="sendChatMessage()">发送</button>
+            </div>
+            <input type="file" id="chatFileInput" multiple accept=".pdf,.docx,.doc,.txt" style="position:fixed;left:-9999px;top:-9999px" onchange="handleChatFileSelect(event)" />
+          </div>
+        </div>
+
         <div class="dash-grid">
           <div class="card">
             <h4>最近活动</h4>
@@ -1159,7 +1211,106 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
   </div>
 </div>
 
+<!-- Space Entry Modal -->
+<div class="space-overlay" id="spaceModal">
+  <div class="space-dialog">
+    <h3>欢迎使用 F1 智能筛选</h3>
+    <p>请输入你的工作区名称，你的数据将独立存储，不同工作区之间互不可见。</p>
+    <input id="spaceInput" type="text" placeholder="例如：研发一部、华东招聘组、demo" maxlength="40" autocomplete="off" />
+    <button class="btn primary" onclick="confirmSpace()">进入工作区</button>
+    <div class="space-hint">留空将使用默认工作区。之后可在 URL 后添加 <code>?space=名称</code> 切换。</div>
+  </div>
+</div>
+
 <script>
+// ===== Space Management (multi-tenant isolation) =====
+var SPACE = 'default';
+
+(function() {
+  var _origFetch = window.fetch;
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    var headers = opts.headers || {};
+    if (typeof url === 'string' && (url.indexOf('/api/') === 0 || url.indexOf('api/') === 0)) {
+      if (headers instanceof Headers) {
+        if (!headers.has('X-Space')) headers.set('X-Space', SPACE);
+      } else if (Array.isArray(headers)) {
+        if (!headers.some(function(h) { return h[0] === 'X-Space'; })) {
+          headers.push(['X-Space', SPACE]);
+        }
+      } else {
+        if (!headers['X-Space']) headers['X-Space'] = SPACE;
+      }
+      opts.headers = headers;
+    }
+    return _origFetch.call(window, url, opts);
+  };
+})();
+
+function getSpaceFromURL() {
+  var m = location.search.match(/[?&]space=([^&]+)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
+function initSpace() {
+  var urlSpace = getSpaceFromURL();
+  var storedSpace = localStorage.getItem('f1_space');
+  if (urlSpace) {
+    SPACE = urlSpace;
+    if (storedSpace !== urlSpace) localStorage.setItem('f1_space', urlSpace);
+    closeSpaceModal();
+    return;
+  }
+  if (storedSpace) {
+    SPACE = storedSpace;
+    // Update URL to reflect stored space
+    var url = new URL(location.href);
+    url.searchParams.set('space', storedSpace);
+    history.replaceState(null, '', url.toString());
+    closeSpaceModal();
+    return;
+  }
+  // No space set — show modal
+  showSpaceModal();
+}
+
+function showSpaceModal() {
+  document.getElementById('spaceModal').classList.add('show');
+  document.getElementById('spaceInput').focus();
+  document.getElementById('spaceInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') confirmSpace();
+  });
+}
+
+function closeSpaceModal() {
+  document.getElementById('spaceModal').classList.remove('show');
+}
+
+function confirmSpace() {
+  var val = document.getElementById('spaceInput').value.trim();
+  SPACE = val || 'default';
+  localStorage.setItem('f1_space', SPACE);
+  var url = new URL(location.href);
+  url.searchParams.set('space', SPACE);
+  history.replaceState(null, '', url.toString());
+  closeSpaceModal();
+  updateSpaceBadge();
+  // Reload data for this space
+  loadJobs();
+  renderResumeList();
+  renderRecentActivities();
+}
+
+function switchSpace() {
+  localStorage.removeItem('f1_space');
+  SPACE = 'default';
+  var url = new URL(location.href);
+  url.searchParams.delete('space');
+  history.replaceState(null, '', url.toString());
+  document.getElementById('spaceInput').value = '';
+  showSpaceModal();
+}
+
 // ===== Runtime Data =====
 const JOBS = [];
 const JOB_REQUIREMENTS = [];
@@ -3152,6 +3303,8 @@ function handleSSEEvent(event, data, taskId) {
         updateProgressBar();
         checkAllReviewed();
         refreshResultsPreviewIfActive();
+        // Chat feedback — post progress for chat-initiated sessions
+        _notifyChatProgress(taskId, c, screenState.completed, screenState.total);
       }
       break;
 
@@ -3170,12 +3323,29 @@ function handleSSEEvent(event, data, taskId) {
       break;
 
     case 'complete':
+      if (screenState.completed < screenState.total) {
+        console.warn('Complete event ignored: only ' + screenState.completed + '/' + screenState.total + ' done');
+        break;
+      }
       screenState.running = false;
       persistActiveScreenTasks();
+      delete _chatProgressNotified[taskId];
       var sBtn = document.getElementById('startScreeningBtn');
       if(sBtn) { sBtn.disabled = false; sBtn.textContent = '重新匹配'; }
       checkAllReviewed();
       refreshResultsPreviewIfActive();
+      if(typeof onChatSessionComplete === 'function') onChatSessionComplete(taskId);
+      break;
+
+    case 'cancelled':
+      screenState.running = false;
+      screenState.cancelled = true;
+      persistActiveScreenTasks();
+      delete _chatProgressNotified[taskId];
+      var sBtn2c = document.getElementById('startScreeningBtn');
+      if(sBtn2c) { sBtn2c.disabled = false; sBtn2c.textContent = '重新匹配'; }
+      refreshResultsPreviewIfActive();
+      if(typeof onChatSessionCancelled === 'function') onChatSessionCancelled(taskId);
       break;
 
     // ── Agent events ──
@@ -3907,6 +4077,269 @@ function renderRecentActivities() {
   el.innerHTML = recentActivities.map(text => `
     <div class="activity-item"><div class="activity-dot"></div><div class="activity-text">${text}</div></div>
   `).join('');
+}
+
+// ===== Dashboard Chat =====
+let dashboardChatMessages = [];   // { role: 'user'|'assistant'|'notice', content, nav, sessionId, cancellable }
+let chatAttachedFiles = [];
+let chatActiveSessions = [];      // { session_id, job_name }
+let chatSending = false;
+
+function renderChatMessages() {
+  var el = document.getElementById('chatMessages');
+  if(!el) return;
+  el.innerHTML = dashboardChatMessages.map(function(m) {
+    var cls = m.role === 'user' ? 'user' : (m.role === 'notice' ? 'notice' : 'assistant');
+    var extra = '';
+    if(m.nav) extra += '<span class="chat-nav-btn" onclick="showPage(\'' + m.nav.page + '\')">' + escHtml(m.nav.label) + '</span>';
+    if(m.cancellable && m.sessionId) extra += '<span class="chat-cancel-btn" onclick="cancelChatSession(\'' + m.sessionId + '\')">取消任务</span>';
+    var extraHtml = extra ? (cls === 'notice' ? ' ' + extra : '<div>' + extra + '</div>') : '';
+    return '<div class="chat-bubble ' + cls + '">' + escHtml(m.content) + extraHtml + '</div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+function clearChatMessages() {
+  dashboardChatMessages = [];
+  chatAttachedFiles = [];
+  chatActiveSessions = [];
+  _chatProgressNotified = {};
+  renderChatMessages();
+  renderChatAttachments();
+}
+
+function renderChatAttachments() {
+  var el = document.getElementById('chatAttachments');
+  if(!el) return;
+  el.innerHTML = chatAttachedFiles.map(function(f, i) {
+    return '<span class="chat-attachment-tag">' + escHtml(f.name) + ' <span class="remove" onclick="removeChatAttachment(' + i + ')">×</span></span>';
+  }).join('');
+}
+
+function removeChatAttachment(idx) {
+  chatAttachedFiles.splice(idx, 1);
+  renderChatAttachments();
+}
+
+function addChatFiles(fileList) {
+  Array.from(fileList || []).forEach(function(f) { chatAttachedFiles.push(f); });
+  renderChatAttachments();
+}
+
+function handleChatDragOver(event) {
+  event.preventDefault();
+  var zone = document.getElementById('chatDropZone');
+  if(zone) zone.classList.add('drag-over');
+}
+function handleChatDragLeave(event) {
+  event.preventDefault();
+  var zone = document.getElementById('chatDropZone');
+  if(zone) zone.classList.remove('drag-over');
+}
+function handleChatDrop(event) {
+  event.preventDefault();
+  var zone = document.getElementById('chatDropZone');
+  if(zone) zone.classList.remove('drag-over');
+  addChatFiles(event.dataTransfer.files);
+}
+function handleChatFileSelect(event) {
+  addChatFiles(event.target.files);
+  event.target.value = '';
+}
+
+function handleChatInputKeydown(event) {
+  if(event.key !== 'Enter') return;
+  event.preventDefault();
+  sendChatMessage();
+}
+
+var CHAT_TOOL_LABELS = {
+  enter_jd: '正在录入JD并解析岗位要求…',
+  start_screening: '正在启动批量筛选…',
+  get_task_status: '正在查询任务进度…',
+  cancel_task: '正在取消任务…'
+};
+
+async function sendChatMessage() {
+  if(chatSending) return;
+  var input = document.getElementById('chatInput');
+  var text = (input.value || '').trim();
+  if(!text && chatAttachedFiles.length === 0) return;
+
+  dashboardChatMessages.push({ role: 'user', content: text || ('（发送了 ' + chatAttachedFiles.length + ' 个附件）') });
+  input.value = '';
+  var filesToSend = chatAttachedFiles.slice();
+  chatAttachedFiles = [];
+  renderChatAttachments();
+
+  var pending = { role: 'assistant', content: '正在思考…' };
+  dashboardChatMessages.push(pending);
+  renderChatMessages();
+
+  chatSending = true;
+  try {
+    var historyPayload = dashboardChatMessages
+      .filter(function(m) { return (m.role === 'user' || m.role === 'assistant') && m !== pending; })
+      .map(function(m) { return { role: m.role, content: m.content }; });
+
+    var form = new FormData();
+    form.append('history', JSON.stringify(historyPayload));
+    form.append('active_sessions', JSON.stringify(chatActiveSessions));
+    filesToSend.forEach(function(f) { form.append('files', f); });
+    appendLLMConfig(form);
+
+    var response = await fetch('/api/chat', { method: 'POST', body: form });
+    if(!response.ok) throw new Error('请求失败: ' + response.status);
+
+    var reader = response.body.getReader();
+    var decoder = new TextDecoder('utf-8');
+    var buffer = '';
+    var pendingNav = null;
+    while(true) {
+      var readResult = await reader.read();
+      if(readResult.done) break;
+      buffer += decoder.decode(readResult.value, {stream: true});
+      var lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+      var currentEvent = '';
+      for(var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if(line.startsWith('event: ')) { currentEvent = line.slice(7).trim(); }
+        else if(line.startsWith('data: ')) {
+          var data;
+          try { data = JSON.parse(line.slice(6)); } catch(e) { continue; }
+          if(currentEvent === 'tool_call') {
+            pending.content = CHAT_TOOL_LABELS[data.name] || ('正在执行 ' + data.name + '…');
+            renderChatMessages();
+          } else if(currentEvent === 'tool_result') {
+            handleChatToolResult(data.name, data.result);
+          } else if(currentEvent === 'navigation') {
+            pendingNav = data;
+          } else if(currentEvent === 'assistant_text') {
+            pending.content = data.text || '';
+            if(pendingNav) pending.nav = pendingNav;
+            renderChatMessages();
+          }
+        }
+      }
+    }
+  } catch(err) {
+    pending.content = '抱歉，请求失败：' + (err.message || err);
+    renderChatMessages();
+  } finally {
+    chatSending = false;
+  }
+}
+
+function handleChatToolResult(name, result) {
+  if(name === 'enter_jd' && result && result.success) {
+    loadJobs();
+  } else if(name === 'start_screening' && result && result.success) {
+    var job = JOBS.find(function(j) { return j.id === result.job_id; }) || {};
+    var task = makeEmptyScreenState({
+      jobId: result.job_id,
+      jobName: result.job_name || job.name || '',
+      running: true,
+      requirements: job.requirements || [],
+      candidates: [],
+      total: result.candidate_count || 0
+    });
+    rememberScreenTask(task, result.session_id);
+    connectSessionStream(result.session_id);
+    chatActiveSessions.push({ session_id: result.session_id, job_name: result.job_name || job.name || '' });
+    dashboardChatMessages.push({
+      role: 'notice',
+      content: '筛选任务已启动（' + (result.job_name || '') + '，' + (result.candidate_count || 0) + ' 份简历）',
+      sessionId: result.session_id,
+      cancellable: true
+    });
+    renderChatMessages();
+  } else if(name === 'cancel_task' && result && result.success) {
+    chatActiveSessions = chatActiveSessions.filter(function(s) { return s.session_id !== result.session_id; });
+  }
+}
+
+function cancelChatSession(sid) {
+  fetch('/api/session/' + encodeURIComponent(sid) + '/cancel', { method: 'POST' }).catch(function(e) { console.error('取消失败', e); });
+}
+
+// Called from handleSSEEvent's 'complete'/'cancelled' cases — only acts on sessions this chat panel started.
+// Post progress updates to chat for chat-initiated screening sessions.
+// Batched: only posts for first candidate, every 3rd, and the final one.
+var _chatProgressNotified = {};
+function _notifyChatProgress(sid, candidate, done, total) {
+  var active = chatActiveSessions.find(function(s) { return s.session_id === sid; });
+  if (!active) return;
+  if (!_chatProgressNotified[sid]) _chatProgressNotified[sid] = 0;
+  _chatProgressNotified[sid]++;
+
+  var n = _chatProgressNotified[sid];
+  var shouldNotify = (n === 1) || (n % 3 === 0) || (done === total);
+  if (!shouldNotify) return;
+
+  var needsHR = candidateNeedsHR(candidate) ? ' ⚠待复核' : ' ✓';
+  dashboardChatMessages.push({
+    role: 'notice',
+    content: '[' + done + '/' + total + '] ' + (candidate.name || '候选人') + ' 分析完成' + needsHR
+  });
+  renderChatMessages();
+}
+
+function onChatSessionComplete(sid) {
+  var entry = chatActiveSessions.find(function(s) { return s.session_id === sid; });
+  if(!entry) return;
+  chatActiveSessions = chatActiveSessions.filter(function(s) { return s.session_id !== sid; });
+
+  var reviewCount = 0;
+  var totalDone = 0;
+  var summaryLines = [];
+  if (screenState && screenState.candidates) {
+    screenState.candidates.forEach(function(c) {
+      if (c.status === 'done' || c.status === 'paused') {
+        totalDone++;
+        if (candidateNeedsHR(c) && !c._reviewed) reviewCount++;
+        var score = (c.scoring && c.scoring.overall_score != null) ? c.scoring.overall_score : null;
+        var tier = (c.scoring && c.scoring.tier_label) || '';
+        var scoreStr = score != null ? ('得分 ' + (score * 100).toFixed(0) + '%') : '';
+        var tierStr = tier ? (' [' + tier + ']') : '';
+        summaryLines.push((c.name || '候选人') + '：' + scoreStr + tierStr);
+      }
+    });
+  }
+
+  var mainMsg = '《' + entry.job_name + '》筛选完成：' + totalDone + ' 人已分析';
+  if (summaryLines.length > 0) {
+    mainMsg += '\n' + summaryLines.join('\n');
+  }
+  dashboardChatMessages.push({ role: 'notice', content: mainMsg });
+
+  if (reviewCount > 0) {
+    dashboardChatMessages.push({
+      role: 'notice',
+      content: reviewCount + ' 人存在待确认项，建议 HR 复核后再查看结果',
+      nav: { page: 'results', label: '进入复核（' + reviewCount + '人）→' }
+    });
+  }
+
+  dashboardChatMessages.push({
+    role: 'notice',
+    content: '可前往筛选结果页查看详细对比和每项要求的证据',
+    nav: { page: 'results', label: '查看筛选结果' }
+  });
+  renderChatMessages();
+  refreshDashboard();
+}
+
+function onChatSessionCancelled(sid) {
+  var entry = chatActiveSessions.find(function(s) { return s.session_id === sid; });
+  if(!entry) return;
+  chatActiveSessions = chatActiveSessions.filter(function(s) { return s.session_id !== sid; });
+  dashboardChatMessages.push({
+    role: 'notice',
+    content: '《' + entry.job_name + '》筛选任务已取消'
+  });
+  renderChatMessages();
+  refreshDashboard();
 }
 
 async function refreshDashboard() {
@@ -4980,12 +5413,22 @@ function parseResumes() {
 document.getElementById('fileInput').addEventListener('change', handleFileSelect);
 
 // ===== Init =====
+initSpace();
+updateSpaceBadge();
 renderReqList();
 loadLLMSettings();
 loadJobs();
 checkActiveSession();
 renderResumeList();
 renderRecentActivities();
+
+function updateSpaceBadge() {
+  var badge = document.getElementById('spaceBadge');
+  if (badge) {
+    badge.style.display = 'inline-flex';
+    badge.textContent = '工作区: ' + SPACE;
+  }
+}
 </script>
 </body>
 </html>

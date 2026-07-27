@@ -10,8 +10,8 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
-from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+from backend.skills.risk_analyzer.node import analyze as analyze_risk
+from backend.skills.recommendation_gen.node import generate as generate_recommendation
 
 MAX_AUTO_RETRIES = 2
 

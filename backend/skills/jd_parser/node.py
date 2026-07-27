@@ -5,8 +5,19 @@
 """
 
 from backend.core.exceptions import ParseException
-from backend.schemas.output_schemas import JDParserOutput
+from backend.skills.jd_parser.schema import JDParserOutput
 from backend.utils.llm_utils import build_chain, parse_llm_json, safe_pydantic_validate
+
+_PROMPT = "skills/jd_parser/prompt.txt"
+_FEW_SHOTS = "skills/jd_parser/few_shots"
+
+
+async def parse(raw_jd: str, api_key: str = "", base_url: str = "", model: str = "") -> dict:
+    """独立的 JD 解析函数，可从 dev_server 直接调用"""
+    chain = build_chain(_PROMPT, few_shots_dir=_FEW_SHOTS, api_key=api_key, base_url=base_url, model=model)
+    response = await chain.ainvoke({"raw_jd": raw_jd})
+    parsed = parse_llm_json(response.content)
+    return safe_pydantic_validate(parsed, JDParserOutput, "JDParser")
 
 
 async def run(state: dict) -> dict:
@@ -30,19 +41,12 @@ async def run(state: dict) -> dict:
     if not raw_jd.strip():
         return {**state, "error": "Skill1 JDParser: raw_jd 为空，无法解析"}
 
-    # ── LLM 调用 ──
-    chain = build_chain("jd_parser.txt")
-    response = await chain.ainvoke({"raw_jd": raw_jd})
-
-    # ── JSON 解析 ──
     try:
-        parsed = parse_llm_json(response.content)
+        result = await parse(raw_jd)
     except ParseException:
         _append_trace(state, "JDParser", "JSON 解析失败", error=True)
         return {**state, "error": "Skill1 JDParser: LLM 返回无法解析为 JSON"}
 
-    # ── Pydantic 校验 ──
-    result = safe_pydantic_validate(parsed, JDParserOutput, "JDParser")
     requirements = result.get("requirements", [])
 
     _append_trace(state, "JDParser",

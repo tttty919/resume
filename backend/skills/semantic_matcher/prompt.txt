@@ -23,25 +23,6 @@
 
 **关键**：有具体项目经历 + 具体职责描述 = satisfied。"使用 XX 框架开发了 YY 系统" = 实际开发经验，不等于"了解"。
 
-### 规则 1.5：OR 条件命中一个即满足
-
-若 requirement 描述中包含"或"逻辑（如"Python或Java或Go，满足其一即可""至少熟悉一门编程语言"）：
-- 逐一检查每个选项是否在简历中有项目支撑
-- **命中任意一个选项** → `satisfied`，evidence 摘录那个选项的证据
-- **所有选项都不满足** → `not_satisfied`
-- 不要因为候选人只会其中一个而判 `cannot_judge` 或扣 confidence
-- reasoning 中写明：候选人满足了"X"选项（完整要求为"X或Y或Z"）
-
-### 规则 1.6：「等」列举 = 命中一个即满足（与 OR 逻辑等效）
-
-若 requirement 描述中列出了多个工具/技能并用"等"连接（如"熟练使用SQL、Python等数据分析工具"）：
-- 「等」前的列举是**举例**，不是**全部必须**——"SQL、Python等" != "SQL且Python"
-- 简历中**有其中任意一项的项目证据** → `satisfied`
-- **典型错误（禁止）**：候选人技能有 SQL（熟练）+ 快手/腾讯数据分析项目 → 判 not_satisfied 因为"没有 Python"
-  - 纠正：「等」= 非穷举举例，SQL 有项目证据 → `satisfied`
-- 不要逐个工具拆分验证——"SQL、Python等"是一条要求的举例说明，不是多条独立要求
-- reasoning 中写明：候选人掌握 XX 工具（要求列举了 SQL、Python等，满足其一即可）
-
 ### 规则 2：must 和 bonus 判断门槛不同
 
 - must + 有具体项目/工作经历（含职责、成果、技术栈）= **satisfied**
@@ -146,8 +127,6 @@ satisfied + confidence < 0.6 → 矛盾，应改判 cannot_judge。
 3. 是否有简历没提却判 not_satisfied？→ 应改 cannot_judge
 4. satisfied 的 evidence 是否逐字摘录 >= 15 字？
 5. requirement 的限定词（行业/场景）是否检查了？
-6. 是否有 OR 条件（"X或Y或Z"）多个选项都判了 not_satisfied，但候选人明显命中其中一个？→ 命中任一项即 satisfied
-7. 是否有「等」列举（"SQL、Python等"）被当成全部必须，要求候选人对每一项都有项目证据？→ 任一项即可
 
 ---
 

@@ -15,8 +15,8 @@ from loguru import logger
 from pydantic import SecretStr
 
 from backend.core.exceptions import ParseException
-from backend.schemas.output_schemas import SemanticMatcherOutput
-from backend.tools.query_expander import expand
+from backend.skills.semantic_matcher.schema import SemanticMatcherOutput
+from backend.skills.semantic_matcher.tools import expand
 from backend.utils.llm_utils import create_llm, load_prompt, parse_llm_json, safe_pydantic_validate
 
 
@@ -227,7 +227,7 @@ async def match(
     if soft_requirements:
         BATCH_SIZE = 3
         llm = create_llm(api_key=api_key, base_url=base_url, model=model)
-        prompt_text = load_prompt("semantic_matcher.txt")
+        prompt_text = load_prompt("skills/semantic_matcher/prompt.txt")
         prompt = ChatPromptTemplate.from_template(prompt_text)
         chain = prompt | llm
 
@@ -236,12 +236,6 @@ async def match(
 
         batches = [soft_requirements[i:i + BATCH_SIZE] for i in range(0, len(soft_requirements), BATCH_SIZE)]
         logger.info(f"分批并行: {len(soft_requirements)} 条软性要求 → {len(batches)} 批 (每批 {BATCH_SIZE} 条)")
-
-        # 预处理：将带"等"列举的要求标记为 OR 语义
-        for r in soft_requirements:
-            desc = r.get("description", "")
-            if "等" in desc and "满足其一" not in desc and "或" not in r.get("name", ""):
-                r["description"] = desc.rstrip("。；;；") + "（满足其一即可）"
 
         async def _run_batch(batch_reqs: list[dict]) -> list[dict]:
             batch_synonyms = {r.get("id", ""): synonyms_map.get(r.get("id", ""), []) for r in batch_reqs}

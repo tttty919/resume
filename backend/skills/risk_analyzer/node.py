@@ -9,7 +9,7 @@ import json
 from langchain_core.prompts import ChatPromptTemplate
 
 from backend.core.exceptions import ParseException
-from backend.schemas.output_schemas import RiskAnalyzerOutput
+from backend.skills.risk_analyzer.schema import RiskAnalyzerOutput
 from backend.utils.llm_utils import create_llm, load_prompt, parse_llm_json, safe_pydantic_validate
 
 
@@ -31,7 +31,7 @@ async def analyze(
     )
 
     llm = create_llm(api_key=api_key, base_url=base_url, model=model)
-    prompt_text = load_prompt("risk_analyzer.txt")
+    prompt_text = load_prompt("skills/risk_analyzer/prompt.txt")
     prompt = ChatPromptTemplate.from_template(prompt_text)
     chain = prompt | llm
 

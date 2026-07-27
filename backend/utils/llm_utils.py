@@ -13,7 +13,7 @@ from pydantic import SecretStr
 from backend.config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
 from backend.core.exceptions import ParseException
 
-_PROMPT_DIR = Path(__file__).parents[1] / "prompts"
+_BACKEND_DIR = Path(__file__).parents[1]
 
 
 def create_llm(
@@ -35,17 +35,33 @@ def create_llm(
     )
 
 
-def load_prompt(filename: str) -> str:
-    """加载 prompt 模板文件"""
-    prompt_path = _PROMPT_DIR / filename
+def load_prompt(relative_path: str) -> str:
+    """加载 prompt 模板文件，路径相对于 backend/ 根目录，如 'skills/jd_parser/prompt.txt'"""
+    prompt_path = _BACKEND_DIR / relative_path
     if not prompt_path.exists():
         raise FileNotFoundError(f"Prompt 文件不存在: {prompt_path}")
     return prompt_path.read_text(encoding="utf-8")
 
 
-def build_chain(prompt_filename: str, **llm_kwargs) -> Runnable:
-    """加载 prompt 模板并构建 LLM Chain"""
+def load_few_shots(relative_dir: str) -> str:
+    """加载 few_shots/ 目录下所有示例文件，按文件名排序拼接成一段文本
+
+    目录不存在或为空时返回空字符串。
+    """
+    dir_path = _BACKEND_DIR / relative_dir
+    if not dir_path.exists():
+        return ""
+    parts = [f.read_text(encoding="utf-8") for f in sorted(dir_path.glob("*.md"))]
+    return "\n\n".join(parts)
+
+
+def build_chain(prompt_filename: str, few_shots_dir: str | None = None, **llm_kwargs) -> Runnable:
+    """加载 prompt 模板（可选拼接 few-shot 示例）并构建 LLM Chain"""
     prompt_text = load_prompt(prompt_filename)
+    if few_shots_dir:
+        few_shot_text = load_few_shots(few_shots_dir)
+        if few_shot_text:
+            prompt_text = f"{prompt_text}\n\n{few_shot_text}"
     llm = create_llm(**llm_kwargs)
     prompt = ChatPromptTemplate.from_template(prompt_text)
     return prompt | llm

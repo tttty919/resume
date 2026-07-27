@@ -5,8 +5,18 @@
 """
 
 from backend.core.exceptions import ParseException
-from backend.schemas.output_schemas import ResumeExtractorOutput
+from backend.skills.resume_extractor.schema import ResumeExtractorOutput
 from backend.utils.llm_utils import build_chain, parse_llm_json, safe_pydantic_validate
+
+_PROMPT = "skills/resume_extractor/prompt.txt"
+
+
+async def extract(raw_resume_text: str, api_key: str = "", base_url: str = "", model: str = "") -> dict:
+    """独立的简历解析函数，可从 dev_server 直接调用"""
+    chain = build_chain(_PROMPT, api_key=api_key, base_url=base_url, model=model)
+    response = await chain.ainvoke({"raw_resume": raw_resume_text})
+    parsed = parse_llm_json(response.content)
+    return safe_pydantic_validate(parsed, ResumeExtractorOutput, "ResumeExtractor")
 
 
 async def run(state: dict) -> dict:
@@ -28,16 +38,11 @@ async def run(state: dict) -> dict:
     if not raw_text.strip():
         return {**state, "error": "Skill2 ResumeExtractor: raw_resume_text 为空"}
 
-    chain = build_chain("resume_extractor.txt")
-    response = await chain.ainvoke({"raw_resume": raw_text})
-
     try:
-        parsed = parse_llm_json(response.content)
+        result = await extract(raw_text)
     except ParseException:
         _append_trace(state, "ResumeExtractor", "JSON 解析失败", error=True)
         return {**state, "error": "Skill2 ResumeExtractor: LLM 返回无法解析为 JSON"}
-
-    result = safe_pydantic_validate(parsed, ResumeExtractorOutput, "ResumeExtractor")
 
     skills_count = len(result.get("skills", []))
     name = result.get("basic_info", {}).get("name", "未知")

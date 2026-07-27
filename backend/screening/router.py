@@ -55,9 +55,9 @@ async def _process_screening(
     api_key: str, base_url: str, model: str,
 ):
     """Background task: process each resume through the screening pipeline."""
-    from backend.workflows.nodes.semantic_matcher import match
-    from backend.workflows.nodes.risk_analyzer import analyze as analyze_risk
-    from backend.workflows.nodes.recommendation_gen import generate as generate_recommendation
+    from backend.skills.semantic_matcher.node import match
+    from backend.skills.risk_analyzer.node import analyze as analyze_risk
+    from backend.skills.recommendation_gen.node import generate as generate_recommendation
 
     session = get_session(sid)
     if not session:
@@ -66,7 +66,8 @@ async def _process_screening(
     requirements = session.requirements
     session.phase = "processing"
     emit(sid, "phase", {"phase": "processing"})
-    upload_dir = Path(settings.app.upload_dir)
+    from backend.utils.space import upload_dir as _space_upload
+    upload_dir = _space_upload()
 
     for slot in session.candidates:
         idx = slot["index"]
@@ -97,7 +98,7 @@ async def _process_screening(
                 "step": "extracting", "index": idx, "total": len(session.candidates),
                 "message": f"正在提取: {fname}...",
             })
-            resume_result = await _call_llm("resume_extractor.txt", {"raw_resume": text}, api_key, base_url, model)
+            resume_result = await _call_llm("skills/resume_extractor/prompt.txt", {"raw_resume": text}, api_key, base_url, model)
             slot["name"] = resume_result.get("basic_info", {}).get("name", fname)
             slot["resume"] = resume_result
 
@@ -185,7 +186,8 @@ async def screening_start(request: Request):
         return {"success": False, "message": "请填写 API Key"}
 
     # Load file content from upload dir
-    upload_dir = Path(settings.app.upload_dir)
+    from backend.utils.space import upload_dir as _space_upload
+    upload_dir = _space_upload()
     files_data: list[tuple[str, bytes]] = []
     candidate_names: list[str] = []
     for fm in files_meta:
