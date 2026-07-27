@@ -1,0 +1,34 @@
+{
+  "_description": "推荐生成 Few-shot #1：均衡型AI PM（陈思远）— 展示\"推荐面试\"场景 + recommendation_reason写法",
+  "input": {
+    "scoring_json": "{\"match_conclusion\":{\"tier_label\":\"推荐面试\",\"hard_rule_triggered\":false,\"must_summary\":{\"satisfied\":3,\"not_satisfied\":0,\"cannot_judge\":1}},\"confidence_assessment\":{\"needs_human_review\":true,\"human_review_reasons\":[\"[req-005]产品经验年限不确定：3段实习累计约2年但均为实习生身份\"],\"low_confidence_items\":[{\"id\":\"req-005\",\"confidence\":0.55}]},\"evidence_quality\":{\"verified_rate\":0.80,\"hallucinated_count\":0},\"counts\":{\"satisfied\":4,\"not_satisfied\":0,\"cannot_judge\":1,\"must_satisfied\":3,\"must_not_satisfied\":0,\"must_cannot_judge\":1,\"must_total\":4},\"overall_score\":78}",
+    "risk_analysis_json": "{\"core_advantages\":[\"AI产品设计与PRD能力确凿：淘宝AI购物助手独立负责多轮对话澄清模块，对话完成率58%→73%\",\"数据分析能力突出：SQL精通+Python熟练，字节飞书构建Random Forest留存预测模型\",\"AI工具实操经验强：Claude Code/Cursor日常使用，LLM Prompt优化使推荐点击率+11.2%\"],\"key_risks\":[\"产品经验年限不确定：3段实习累计约2年但均为实习生身份\",\"原型设计偏弱：Figma熟练但Axure仅基础\"],\"info_gaps\":[\"全职产品经验年限未明确\"],\"interview_suggestions\":[\"你在淘宝的实习是日常实习还是校招留用岗？\",\"淘宝AI购物助手的多轮对话澄清模块，如何确定追问维度？\"]}",
+    "requirements_json": "[{\"id\":\"req-001\",\"name\":\"AI产品需求与PRD\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-005\",\"name\":\"学历与经验\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-007\",\"name\":\"数据分析能力\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-008\",\"name\":\"原型与PRD输出\",\"type\":\"must\",\"importance\":\"medium\"},{\"id\":\"req-010\",\"name\":\"CS/AI专业或编程\",\"type\":\"bonus\",\"importance\":\"medium\"}]",
+    "validated_items_json": "[{\"requirement_id\":\"req-001\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\"},{\"requirement_id\":\"req-005\",\"status\":\"cannot_judge\",\"evidence_support\":\"信息不足\"},{\"requirement_id\":\"req-007\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\"},{\"requirement_id\":\"req-008\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\"},{\"requirement_id\":\"req-010\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\"}]"
+  },
+  "expected_output": {
+    "summary": {
+      "satisfied_count": 4,
+      "not_satisfied_count": 0,
+      "cannot_judge_count": 1,
+      "core_advantages": [
+        "AI产品设计能力确凿：淘宝AI购物助手独立负责多轮对话模块，对话完成率提升至73%",
+        "数据分析能力突出：SQL+Python熟练，有飞书用户留存预测模型实战经验",
+        "AI工具实操经验强：Claude Code/Cursor日常使用，LLM Prompt优化使推荐点击率+11.2%",
+        "实习覆盖AI PM完整链路：阿里（AI产品）+小红书（搜索策略）+字节（数据分析），经验广度好"
+      ],
+      "key_risks": [
+        "产品经验年限不确定（req-005）：3段实习均为实习生身份，JD要求2年全职产品经验需HR确认",
+        "原型工具覆盖面窄：Figma熟练但Axure仅基础，需确认团队工具栈"
+      ],
+      "recommendation": "推荐面试",
+      "needs_human_review": true,
+      "human_review_questions": [
+        "[req-005] 候选人的3段实习均为实习生身份，是否有全职产品经验未体现在简历中？公司对\"2年产品经验\"的定义是否包含实习期？",
+        "[req-001] 淘宝AI购物助手的多轮对话澄清模块，候选人是如何确定追问维度的？有没有做过A/B测试验证效果？",
+        "[req-007] 在飞书做的用户留存预测模型的准确率如何？模型产出是否被业务方采纳并推动了实际产品改动？"
+      ]
+    },
+    "recommendation_reason": "4项满足，0项不满足，加权匹配分78分。3项必须项（AI产品PRD、数据分析、原型输出）均有确凿的项目证据和量化成果，核心能力匹配度高。仅学历与经验1项因候选人无全职经验而标记为无法判断，confidence=55%，建议HR电话确认产品经验年限的定义后直接安排面试。"
+  }
+}

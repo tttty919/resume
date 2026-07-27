@@ -183,35 +183,305 @@ def eval_jd_parsing():
     return reqs
 
 
-def eval_matching():
-    """Step 3: 匹配质量（需要先跑完 extraction）"""
+def eval_or_matching():
+    """Step 3: OR 条件匹配专项测试"""
     print("\n" + "=" * 60)
-    print("STEP 3: 匹配与排序评估")
+    print("STEP 3: OR 条件匹配专项测试")
     print("=" * 60)
 
+    # 找一个明确命中 Python 的候选人
+    resume_file = GOLDEN_DIR / "resumes" / "简历_张明_AI产品经理.txt"
+    resume_text = resume_file.read_text(encoding="utf-8")
+
+    # 构造 OR 条件：Python或Ruby或Haskell
+    test_reqs = [{
+        "id": "req-or-001",
+        "name": "编程语言（OR测试）",
+        "description": "熟悉Python或Ruby或Haskell等至少一门编程语言（满足其一即可）",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["Python", "Ruby", "Haskell"]
+    }]
+
+    # 先提取简历结构化信息
+    print("\n  1. 提取简历...")
     try:
-        resp = call_api("POST", "/api/parse-jd",
-            json={"jd": TEST_JD, "api_key": API_KEY})
-        if not resp.get("success"):
-            print(f"  无法获取 JD 要求: {resp.get('message')}")
-            return
-        requirements = resp.get("data", {}).get("requirements", [])
+        extract_resp = call_api("POST", "/api/extract-resume-text",
+            json={"resume": resume_text, "api_key": API_KEY})
     except Exception as e:
-        print(f"  ✗ JD 解析失败: {e}")
-        return
+        print(f"  ✗ 提取失败: {e}")
+        return False
 
+    if not extract_resp.get("success"):
+        print(f"  ✗ 提取失败: {extract_resp.get('message')}")
+        return False
+
+    resume_data = extract_resp.get("data", {})
+    print(f"  候选人: {resume_data.get('basic_info', {}).get('name', '?')}")
+    skills = resume_data.get("skills", [])
+    python_in_skills = any("python" in s.lower() for s in skills)
+    print(f"  技能中{'有' if python_in_skills else '没有'} Python: {[s for s in skills if 'python' in s.lower()]}")
+
+    # 调用匹配 API
+    print("\n  2. 匹配 OR 条件...")
+    try:
+        match_resp = call_api("POST", "/api/match",
+            json={
+                "requirements": test_reqs,
+                "resume": resume_data,
+                "raw_resume_text": resume_text,
+                "api_key": API_KEY
+            })
+    except Exception as e:
+        print(f"  ✗ 匹配失败: {e}")
+        return False
+
+    if not match_resp.get("success"):
+        print(f"  ✗ 匹配失败: {match_resp.get('message')}")
+        return False
+
+    matches = match_resp.get("data", {}).get("matches", [])
+    if not matches:
+        print("  ✗ 无匹配结果")
+        return False
+
+    m = matches[0]
+    status = m.get("status", "?")
+    confidence = m.get("confidence", 0)
+    reasoning = m.get("reasoning", "")
+
+    icon = "✓" if status == "satisfied" else "✗"
+    print(f"\n  结果: {icon} status={status} confidence={confidence:.0%}")
+    print(f"  reasoning: {reasoning}")
+
+    # 判断：张明简历里 Python 精通，应该 satisfied
+    if status == "satisfied":
+        print(f"\n  ✅ OR 匹配正确！候选人命中 Python → satisfied")
+        return True
+    else:
+        print(f"\n  ❌ OR 匹配错误！候选人精通 Python 但被判 {status}")
+        print(f"     预期：OR 条件命中一个即 satisfied")
+        return False
+
+
+def eval_skill3_full():
+    """Step 4: Skill 3 全量评测 — 5 份简历逐项匹配 + 对比人工标注"""
+    print("\n" + "=" * 60)
+    print("STEP 4: Skill 3 全量匹配评测（5 份简历）")
+    print("=" * 60)
+
+    # 1. JD 解析
+    print("\n  [1/3] 解析 JD...")
+    try:
+        jd_resp = call_api("POST", "/api/parse-jd", json={"jd": TEST_JD, "api_key": API_KEY})
+        if not jd_resp.get("success"):
+            print(f"    ✗ JD 解析失败: {jd_resp.get('message')}")
+            return None
+        requirements = jd_resp.get("data", {}).get("requirements", [])
+    except Exception as e:
+        print(f"    ✗ JD 解析 API 调用失败: {e}")
+        return None
+
+    print(f"    JD 解析完成: {len(requirements)} 条要求")
+    for r in requirements:
+        has_or = "或" in r.get("description", "") or "或" in r.get("name", "")
+        tag = " [OR]" if has_or else ""
+        print(f"      {r['id']}: [{r['type']}/{r['importance']}] {r['name']}{tag}")
+
+    # 2. 加载人工标注期望值
     label_dir = GOLDEN_DIR / "labels"
-    expected_tiers = {}
-    for label_file in sorted(label_dir.iterdir()):
-        label = json.loads(label_file.read_text(encoding="utf-8"))
-        expected_tiers[label_file.stem.replace("_expected", "")] = label.get("expected_job_match_tier", "unknown")
+    expected_labels = {}
+    for lf in sorted(label_dir.iterdir()):
+        if lf.suffix == ".json":
+            name = lf.stem.replace("_expected", "")
+            expected_labels[name] = json.loads(lf.read_text(encoding="utf-8"))
 
-    print(f"\n  期望排序（人工标注）:")
-    for name, tier in sorted(expected_tiers.items(), key=lambda x: {"high": 0, "medium": 1, "low": 2}.get(x[1], 99)):
-        print(f"    {name}: {tier}")
+    # 3. 逐份简历 → 提取 + 匹配
+    print(f"\n  [2/3] 匹配 {len(expected_labels)} 份简历...")
+    resume_dir = GOLDEN_DIR / "resumes"
+    all_results = []
 
-    print(f"\n  ⚡ 匹配评估暂需手动验证。运行完整 Agent 流程后对比排序结果。")
-    return expected_tiers
+    for resume_file in sorted(resume_dir.iterdir()):
+        if resume_file.suffix != ".txt":
+            continue
+        name_key = resume_file.stem.replace("简历_", "").replace("_AI产品经理", "").replace("_AI产品", "")
+        expected = expected_labels.get(name_key)
+        if not expected:
+            print(f"    ⚠ {name_key}: 无标注，跳过")
+            continue
+
+        resume_text = resume_file.read_text(encoding="utf-8")
+        print(f"\n    --- {name_key} (期望: {expected.get('expected_job_match_tier', '?')}) ---")
+
+        # 提取
+        try:
+            ext_resp = call_api("POST", "/api/extract-resume-text",
+                json={"resume": resume_text, "api_key": API_KEY})
+        except Exception as e:
+            print(f"      ✗ 提取失败: {e}")
+            continue
+
+        if not ext_resp.get("success"):
+            print(f"      ✗ 提取失败: {ext_resp.get('message')}")
+            continue
+
+        resume_data = ext_resp.get("data", {})
+        candidate_name = resume_data.get("basic_info", {}).get("name", "?")
+        print(f"      姓名: {candidate_name}")
+
+        # 匹配
+        try:
+            match_resp = call_api("POST", "/api/match",
+                json={
+                    "requirements": requirements,
+                    "resume": resume_data,
+                    "raw_resume_text": resume_text,
+                    "api_key": API_KEY
+                })
+        except Exception as e:
+            print(f"      ✗ 匹配失败: {e}")
+            continue
+
+        if not match_resp.get("success"):
+            print(f"      ✗ 匹配失败: {match_resp.get('message')}")
+            continue
+
+        matches = match_resp.get("data", {}).get("matches", [])
+        counts = {"satisfied": 0, "not_satisfied": 0, "cannot_judge": 0}
+        or_checks = []  # OR 条件的匹配情况
+        bad_cases = []  # 潜在 Bad Case
+
+        for m in matches:
+            status = m.get("status", "cannot_judge")
+            counts[status] = counts.get(status, 0) + 1
+
+            req_id = m.get("requirement_id", "")
+            rid = m.get("requirement_name", "")
+            desc = ""
+            req_type = "bonus"
+            for r in requirements:
+                if r.get("id") == req_id:
+                    desc = r.get("description", "")
+                    req_type = r.get("type", "bonus")
+                    break
+
+            has_or = "或" in desc or "或" in rid
+            confidence = m.get("confidence", 0)
+            reasoning = m.get("reasoning", "")
+            status_icon = {"satisfied": "v", "not_satisfied": "x", "cannot_judge": "?"}.get(status, "?")
+
+            if has_or:
+                or_checks.append({
+                    "req_id": req_id,
+                    "name": rid,
+                    "description": desc,
+                    "status": status,
+                    "confidence": confidence,
+                    "reasoning": reasoning[:120]
+                })
+                print(f"      {status_icon} {rid} [{status}] OR条件")
+
+            # Bad Case 收集
+            is_must = req_type == "must"
+            if is_must and status == "not_satisfied":
+                bad_cases.append({"kind": "must_ns", "req_name": rid, "status": status,
+                    "confidence": confidence, "reasoning": reasoning, "description": desc})
+            elif is_must and status == "cannot_judge" and confidence < 0.6:
+                bad_cases.append({"kind": "must_cj", "req_name": rid, "status": status,
+                    "confidence": confidence, "reasoning": reasoning, "description": desc})
+            elif has_or and status == "not_satisfied":
+                bad_cases.append({"kind": "or_strict", "req_name": rid, "status": status,
+                    "confidence": confidence, "reasoning": reasoning, "description": desc})
+
+        # 汇总
+        must_total = len([r for r in requirements if r.get("type") == "must"])
+        must_satisfied = sum(1 for m in matches if m.get("status") == "satisfied"
+                             and any(r.get("id") == m.get("requirement_id") and r.get("type") == "must"
+                                     for r in requirements))
+        score_pct = must_satisfied / must_total * 100 if must_total else 0
+
+        print(f"      汇总: {counts['satisfied']}满足 {counts['not_satisfied']}不满足 {counts['cannot_judge']}无法判断")
+        print(f"      必须项满足率: {must_satisfied}/{must_total} ({score_pct:.0f}%)")
+
+        if or_checks:
+            print(f"      OR 条件详情:")
+            for oc in or_checks:
+                ok = "✅" if oc["status"] == "satisfied" else "❌"
+                print(f"        {ok} {oc['name']}: {oc['status']} ({oc['confidence']:.0%}) — {oc['reasoning']}")
+
+        all_results.append({
+            "name": name_key,
+            "candidate_name": candidate_name,
+            "expected_tier": expected.get("expected_job_match_tier", "?"),
+            "counts": counts,
+            "must_satisfied": must_satisfied,
+            "must_total": must_total,
+            "score_pct": score_pct,
+            "or_checks": or_checks,
+            "bad_cases": bad_cases,
+        })
+
+    # 4. 排序 & 汇总
+    print(f"\n{'='*60}")
+    print(f"  [3/3] Skill 3 评测汇总")
+    print(f"{'='*60}")
+    print(f"  {'候选人':<10} {'期望':<8} {'must满足率':<12} {'满足':<6} {'不满足':<6} {'无法判':<6} {'排名':<6}")
+    print(f"  {'-'*54}")
+
+    tier_order = {"high": 0, "medium": 1, "low": 2}
+    sorted_results = sorted(all_results, key=lambda x: -x["score_pct"])
+
+    for i, r in enumerate(sorted_results):
+        expected = r["expected_tier"]
+        # 根据实际分数推断 tier
+        if r["score_pct"] >= 70:
+            actual_tier = "high"
+        elif r["score_pct"] >= 40:
+            actual_tier = "medium"
+        else:
+            actual_tier = "low"
+        match_ok = "✓" if actual_tier == expected else "⚠"
+        print(f"  {r['candidate_name']:<10} {expected:<8} {r['must_satisfied']}/{r['must_total']} ({r['score_pct']:.0f}%)     {r['counts']['satisfied']:<6} {r['counts']['not_satisfied']:<6} {r['counts']['cannot_judge']:<6} #{i+1:<5} {match_ok}")
+
+    # 检查排序是否合理
+    print(f"\n  排序验证:")
+    top2 = [r["name"] for r in sorted_results[:2]]
+    high_expected = [r["name"] for r in all_results if r["expected_tier"] == "high"]
+    overlap = set(top2) & set(high_expected)
+    if len(overlap) >= 1:
+        print(f"    ✅ Top2 {top2} 至少包含 {len(overlap)} 个期望 high 候选人 ({list(overlap)})")
+    else:
+        print(f"    ❌ Top2 {top2} 不包含任何期望 high 候选人 ({high_expected})")
+
+    # 5. Bad Case 分析
+    print(f"\n{'='*60}")
+    print(f"  Bad Case 分析")
+    print(f"{'='*60}")
+
+    total_bad = 0
+    for r in all_results:
+        bad_items = r.get("bad_cases", [])
+        if bad_items:
+            print(f"\n  ⚡ {r['candidate_name']} ({r['expected_tier']}期望):")
+            for bc in bad_items:
+                kind = bc["kind"]
+                icon = {"must_ns": "🔴", "must_cj": "🟡", "or_strict": "🔶"}.get(kind, "⚪")
+                print(f"    {icon} [{bc['req_name']}] status={bc['status']} conf={bc['confidence']:.0%}")
+                print(f"       理由: {bc['reasoning'][:150]}")
+                print(f"       需求: {bc['description'][:120]}")
+                total_bad += 1
+
+    if total_bad == 0:
+        print("\n  ✅ 未发现明显 Bad Case")
+    else:
+        print(f"\n  共 {total_bad} 个潜在 Bad Case，需人工审查")
+
+    return sorted_results
+
+
+def eval_matching():
+    """Step 4 别名（保留向后兼容）"""
+    return eval_skill3_full()
 
 
 if __name__ == "__main__":
@@ -221,9 +491,14 @@ if __name__ == "__main__":
 
     extraction_results = eval_extraction()
     jd_results = eval_jd_parsing()
-    eval_matching()
+    or_test_passed = eval_or_matching()
+    skill3_results = eval_skill3_full()
 
     print(f"\n{'='*60}")
-    print("评估完成。")
-    print("提示：每次改 Prompt 后重新跑此脚本，对比数值变化。")
+    print("全量评估完成。")
+    print(f"  Step 1 (简历提取): 平均 F1 = {sum(r['skill_f1'] for r in extraction_results)/len(extraction_results):.1%}" if extraction_results else "  Step 1: 跳过")
+    print(f"  Step 2 (JD解析): {'完成' if jd_results else '跳过'}")
+    print(f"  Step 3 (OR专项): {'PASS' if or_test_passed else 'FAIL'}")
+    print(f"  Step 4 (Skill3全量): {'完成 ' + str(len(skill3_results)) + ' 人' if skill3_results else '跳过'}")
+    print(f"\n提示：每次改 Prompt 后重新跑此脚本，对比数值变化。")
     print(f"{'='*60}")

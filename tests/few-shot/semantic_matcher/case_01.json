@@ -1,0 +1,68 @@
+{
+  "_description": "语义匹配 Few-shot #1：均衡型AI PM（陈思远）— 展示有项目=满足 vs 仅标签=无法判断的区分",
+  "input": {
+    "requirements_json": "[{\"id\":\"req-001\",\"name\":\"AI产品需求与PRD\",\"description\":\"负责AI创新产品的需求分析、功能设计与迭代规划，独立撰写PRD\",\"type\":\"must\",\"importance\":\"high\",\"keywords\":[\"AI创新产品\",\"需求分析\",\"PRD\",\"功能设计\",\"迭代规划\"]},{\"id\":\"req-005\",\"name\":\"学历与经验\",\"description\":\"本科及以上学历，2年以上互联网/AI产品经验\",\"type\":\"must\",\"importance\":\"high\",\"keywords\":[\"本科\",\"2年\",\"互联网\",\"AI产品\"]},{\"id\":\"req-007\",\"name\":\"数据分析能力\",\"description\":\"具备优秀的数据分析能力，熟练使用SQL、Python等数据分析工具（满足其一即可）\",\"type\":\"must\",\"importance\":\"high\",\"keywords\":[\"SQL\",\"Python\",\"数据分析\"]},{\"id\":\"req-008\",\"name\":\"原型与PRD输出\",\"description\":\"熟悉Axure/Figma等原型工具，能独立输出高质量PRD和交互原型\",\"type\":\"must\",\"importance\":\"medium\",\"keywords\":[\"Axure\",\"Figma\",\"PRD\",\"交互原型\"]},{\"id\":\"req-010\",\"name\":\"CS/AI专业或编程\",\"description\":\"计算机/AI相关专业背景或具备基础编程能力者优先（满足其一即可）\",\"type\":\"bonus\",\"importance\":\"medium\",\"keywords\":[\"计算机\",\"AI\",\"编程\",\"相关专业\"]}]",
+    "resume_json": "{\"basic_info\":{\"name\":\"陈思远\",\"school\":\"华中科技大学\",\"major\":\"信息管理与信息系统\",\"degree\":\"硕士\",\"work_years\":null,\"current_role\":\"AI产品经理实习生\"},\"skills\":[\"PRD编写\",\"Figma\",\"Axure\",\"SQL\",\"Python\",\"Pandas\",\"Scikit-learn\",\"Claude Code\",\"Cursor\",\"Prompt Engineering\",\"数据分析\",\"用户访谈\",\"竞品分析\",\"HTML\",\"CSS\",\"JavaScript\"],\"work_experiences\":[{\"company\":\"阿里巴巴（淘宝）\",\"role\":\"AI产品经理实习生\",\"duration\":\"2026.01–至今\"}]}",
+    "synonyms_json": "{\"req-001\":[\"PRD撰写\",\"产品文档\",\"需求文档\",\"MRD\"],\"req-005\":[\"产品经验\",\"互联网经验\",\"AI产品\"],\"req-007\":[\"SQL\",\"MySQL\",\"数据查询\",\"Pandas\",\"NumPy\",\"数据分析工具\"],\"req-008\":[\"Axure\",\"Sketch\",\"Adobe XD\",\"原型设计\",\"交互设计\"],\"req-010\":[\"CS\",\"计算机科学\",\"软件工程\",\"编程能力\",\"coding\"]}",
+    "raw_resume_text": "陈思远\n...\n阿里巴巴（淘宝）\nAI产品经理实习生\n2026.01–至今\n业务背景：参与淘宝\"AI购物助手\"的产品迭代，帮助用户通过自然语言对话完成商品搜索、比价和购买决策。\n产品设计：独立负责\"多轮对话澄清\"模块...上线后用户对话完成率从58%提升至73%。\nPrompt优化：针对商品推荐场景，迭代优化LLM的System Prompt...推荐点击率提升11.2%。\n效果监控：搭建AI购物助手的核心指标体系...\n个人技能\n产品技能：PRD编写（熟练）、Figma（熟练）、Axure（基础）...\n数据分析：SQL（精通）、Python（熟练，Pandas/Scikit-learn）...\n开发能力：基础的HTML/CSS/JavaScript..."
+  },
+  "expected_output": {
+    "matches": [
+      {
+        "requirement_id": "req-001",
+        "requirement_name": "AI产品需求与PRD",
+        "status": "satisfied",
+        "reasoning": "候选人在阿里巴巴（淘宝）担任AI产品经理实习生期间，独立负责\"多轮对话澄清\"模块的产品设计，完成从需求分析到功能上线的全流程，上线后用户对话完成率从58%提升至73%，与要求的\"AI创新产品的需求分析、功能设计与迭代规划，独立撰写PRD\"匹配。",
+        "synonyms_used": [],
+        "confidence": 0.92,
+        "evidence": "产品设计：独立负责\"多轮对话澄清\"模块，当用户需求模糊时（如\"想买一个送妈妈的礼物\"），通过追问收集用户偏好（预算、风格、年龄等）缩小候选商品范围。上线后用户对话完成率从58%提升至73%。",
+        "evidence_location": "工作经历第1段（阿里巴巴），职责第3条",
+        "evidence_support": "确凿"
+      },
+      {
+        "requirement_id": "req-005",
+        "requirement_name": "学历与经验",
+        "status": "cannot_judge",
+        "reasoning": "候选人为华中科技大学硕士，满足\"本科及以上学历\"。但工作年限方面：简历标注3段实习经历（2024.06-至今），累计约2年但均为实习生身份。JD要求\"2年以上互联网/AI产品经验\"通常指全职产品经验，实习生经历是否计入存在歧义，需HR确认。",
+        "synonyms_used": [],
+        "confidence": 0.55,
+        "evidence": "信息不足",
+        "evidence_location": "",
+        "evidence_support": "信息不足"
+      },
+      {
+        "requirement_id": "req-007",
+        "requirement_name": "数据分析能力",
+        "status": "satisfied",
+        "reasoning": "候选人掌握SQL（精通）和Python（Pandas/Scikit-learn），在字节跳动（飞书）实习中使用SQL和Python分析用户行为数据并构建了Random Forest留存预测模型。要求列举了\"SQL、Python等\"（「等」=举例，满足其一即满足），候选人两个都满足且有项目证据。",
+        "synonyms_used": [],
+        "confidence": 0.93,
+        "evidence": "使用SQL和Python分析飞书文档模块的用户行为数据，识别活跃用户的核心使用路径。构建用户留存预测模型（Random Forest），识别高流失风险用户的关键行为特征。",
+        "evidence_location": "工作经历第3段（字节跳动），职责第1-2条",
+        "evidence_support": "确凿"
+      },
+      {
+        "requirement_id": "req-008",
+        "requirement_name": "原型与PRD输出",
+        "status": "satisfied",
+        "reasoning": "候选人技能列表标注PRD编写（熟练）、Figma（熟练）、Axure（基础），且在淘宝和AI质检系统项目中均有PRD输出和产品设计的实际项目证据。要求列举了\"Axure/Figma等\"（「等」=举例，满足其一即可），候选人Figma熟练且有项目支撑。",
+        "synonyms_used": [],
+        "confidence": 0.88,
+        "evidence": "产品技能：PRD编写（熟练）、Figma（熟练）、Axure（基础）、用户访谈、竞品分析、数据埋点设计",
+        "evidence_location": "技能列表 + 工作经历第1段产品设计职责",
+        "evidence_support": "确凿"
+      },
+      {
+        "requirement_id": "req-010",
+        "requirement_name": "CS/AI专业或编程",
+        "status": "satisfied",
+        "reasoning": "候选人专业\"信息管理与信息系统\"属信息科学类，非严格CS/AI；但候选人具备基础编程能力（HTML/CSS/JavaScript+Vibe Coding），满足OR条件中的\"具备基础编程能力\"选项。作为bonus项，技能列表有编程标签即可满足。",
+        "synonyms_used": [],
+        "confidence": 0.78,
+        "evidence": "基础的HTML/CSS/JavaScript，能使用Vibe Coding完成简单的工具页面开发。",
+        "evidence_location": "技能列表（开发能力）",
+        "evidence_support": "确凿"
+      }
+    ]
+  }
+}

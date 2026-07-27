@@ -1,0 +1,68 @@
+{
+  "_description": "语义匹配 Few-shot #2：AI研究员转型PM（王子轩）— 展示not_satisfied vs cannot_judge区分 + OR条件命中",
+  "input": {
+    "requirements_json": "[{\"id\":\"req-001\",\"name\":\"AI产品需求与PRD\",\"description\":\"负责AI创新产品的需求分析、功能设计与迭代规划，独立撰写PRD\",\"type\":\"must\",\"importance\":\"high\",\"keywords\":[\"AI创新产品\",\"需求分析\",\"PRD\",\"功能设计\",\"迭代规划\"]},{\"id\":\"req-002\",\"name\":\"AI大模型理解\",\"description\":\"深度理解AI大模型能力边界，能将技术能力转化为产品方案\",\"type\":\"must\",\"importance\":\"high\",\"keywords\":[\"大模型\",\"能力边界\",\"产品方案\",\"AI\"]},{\"id\":\"req-005\",\"name\":\"学历与经验\",\"description\":\"本科及以上学历，2年以上互联网/AI产品经验\",\"type\":\"must\",\"importance\":\"high\",\"keywords\":[\"本科\",\"2年\",\"互联网\",\"AI产品\"]},{\"id\":\"req-007\",\"name\":\"数据分析能力\",\"description\":\"具备优秀的数据分析能力，熟练使用SQL、Python等数据分析工具（满足其一即可）\",\"type\":\"must\",\"importance\":\"high\",\"keywords\":[\"SQL\",\"Python\",\"数据分析\"]},{\"id\":\"req-008\",\"name\":\"原型与PRD输出\",\"description\":\"熟悉Axure/Figma等原型工具，能独立输出高质量PRD和交互原型\",\"type\":\"must\",\"importance\":\"medium\",\"keywords\":[\"Axure\",\"Figma\",\"PRD\",\"交互原型\"]}]",
+    "resume_json": "{\"basic_info\":{\"name\":\"王子轩\",\"school\":\"上海交通大学\",\"major\":\"人工智能\",\"degree\":\"硕士\",\"work_years\":null,\"current_role\":\"AI产品实习生（大模型应用方向）\"},\"skills\":[\"Python\",\"PyTorch\",\"Transformers\",\"LangChain\",\"RAG\",\"Prompt Engineering\",\"SQL\",\"Pandas\",\"NumPy\",\"Figma\",\"PRD编写\",\"竞品分析\",\"模型微调\",\"SFT\",\"LoRA\"],\"work_experiences\":[{\"company\":\"商汤科技\",\"role\":\"AI产品实习生（大模型应用方向）\",\"duration\":\"2026.02–2026.06\"},{\"company\":\"上海人工智能实验室\",\"role\":\"大模型训练实习生\",\"duration\":\"2025.06–2025.09\"}]}",
+    "synonyms_json": "{\"req-001\":[\"PRD撰写\",\"产品文档\",\"需求文档\",\"MRD\"],\"req-002\":[\"LLM\",\"大语言模型\",\"GPT\",\"AI能力\",\"模型\"],\"req-005\":[\"产品经验\",\"互联网经验\",\"AI产品\"],\"req-007\":[\"SQL\",\"MySQL\",\"数据查询\",\"Pandas\",\"NumPy\"],\"req-008\":[\"Axure\",\"Sketch\",\"Adobe XD\",\"原型设计\",\"交互设计\"]}",
+    "raw_resume_text": "王子轩\n...\n商汤科技\nAI产品实习生（大模型应用方向）\n2026.02–2026.06\n产品设计：独立完成智能投研助手V1.0的产品方案，包括需求梳理、竞品调研（BloombergGPT、Kensho等）、功能设计和PRD编写。\n技术落地：将公司自研的大模型能力适配到金融研报自动生成场景，设计Prompt模板与RAG知识库架构...\n效果评测：设计50维度的LLM输出质量评测体系...\n上海人工智能实验室\n大模型训练实习生\n2025.06–2025.09\n参与书生通用大模型的SFT数据构建工作...\n个人技能\n产品工具：Figma（学习中使用）、PRD编写（基础）、竞品分析\nAI/ML：Python（精通）、PyTorch（熟练）..."
+  },
+  "expected_output": {
+    "matches": [
+      {
+        "requirement_id": "req-001",
+        "requirement_name": "AI产品需求与PRD",
+        "status": "satisfied",
+        "reasoning": "候选人在商汤科技担任AI产品实习生期间，独立完成智能投研助手V1.0的产品方案，包括需求梳理、竞品调研、功能设计和PRD编写。有具体的产品方案输出和PRD编写项目证据，与要求的\"负责AI创新产品的需求分析、功能设计与迭代规划，独立撰写PRD\"匹配。",
+        "synonyms_used": [],
+        "confidence": 0.85,
+        "evidence": "产品设计：独立完成智能投研助手V1.0的产品方案，包括需求梳理、竞品调研（BloombergGPT、Kensho等）、功能设计和PRD编写。",
+        "evidence_location": "工作经历第1段（商汤科技），职责第2条",
+        "evidence_support": "确凿"
+      },
+      {
+        "requirement_id": "req-002",
+        "requirement_name": "AI大模型理解",
+        "status": "satisfied",
+        "reasoning": "候选人在上海人工智能实验室参与书生通用大模型的SFT数据构建和训练数据配比优化，在商汤科技设计了RAG知识库架构和Prompt模板，且有ACL论文发表。技术能力远超要求，从底层训练到上层应用全链路理解大模型能力边界。",
+        "synonyms_used": [],
+        "confidence": 0.95,
+        "evidence": "技术落地：将公司自研的大模型能力适配到金融研报自动生成场景，设计Prompt模板与RAG知识库架构，解决研报数据时效性和引用准确性问题。参与书生通用大模型的SFT数据构建工作，负责数据清洗脚本编写与质量过滤规则的制定。",
+        "evidence_location": "工作经历第1段（商汤）职责第1条 + 工作经历第2段（上海AI Lab）",
+        "evidence_support": "确凿"
+      },
+      {
+        "requirement_id": "req-005",
+        "requirement_name": "学历与经验",
+        "status": "cannot_judge",
+        "reasoning": "候选人本科浙江大学CS + 硕士上海交通大学AI，学历远超要求。但JD要求\"2年以上互联网/AI产品经验\"，通常指全职产品经验。候选人仅有一段AI产品实习（商汤，4个月），另一段为AI训练实习（非产品岗），累计产品经验不足1年且为实习生身份。实习经历是否计入需HR确认。",
+        "synonyms_used": [],
+        "confidence": 0.50,
+        "evidence": "信息不足",
+        "evidence_location": "",
+        "evidence_support": "信息不足"
+      },
+      {
+        "requirement_id": "req-007",
+        "requirement_name": "数据分析能力",
+        "status": "satisfied",
+        "reasoning": "候选人掌握SQL（熟练）、Pandas（精通）、NumPy（精通），且在上海AI Lab实习中使用Python/Pandas进行训练数据分析，用WandB做实验追踪。要求列举了\"SQL、Python等\"（「等」=举例），候选人Python精通有项目证据，满足其一的判定标准。",
+        "synonyms_used": [],
+        "confidence": 0.90,
+        "evidence": "基于模型在特定任务上的表现分析，提出训练数据配比优化方案，使模型在逻辑推理基准测试中提升4.2个百分点。",
+        "evidence_location": "工作经历第2段（上海AI Lab），职责第2条",
+        "evidence_support": "确凿"
+      },
+      {
+        "requirement_id": "req-008",
+        "requirement_name": "原型与PRD输出",
+        "status": "cannot_judge",
+        "reasoning": "候选人PRD编写标注为\"基础\"，Figma标注为\"学习中使用\"——仅属技能标签/学习阶段，无实际项目中的交互原型输出证据。在商汤虽有PRD输出但未提及原型设计。技能标签满足'了解'级别，但must要求需要实际项目证据→不能判satisfied，也不能判not_satisfied（候选人确实具备基础），应判cannot_judge。",
+        "synonyms_used": [],
+        "confidence": 0.45,
+        "evidence": "产品工具：Figma（学习中使用）、PRD编写（基础）、竞品分析",
+        "evidence_location": "技能列表",
+        "evidence_support": "信息不足"
+      }
+    ]
+  }
+}

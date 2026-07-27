@@ -1,0 +1,91 @@
+{
+  "_description": "JD解析 Few-shot #1：标准JD，展示完整拆解（职责+要求+OR条件+关键词）",
+  "input": {
+    "raw_jd": "## AI产品经理 — 岗位描述\n\n### 岗位职责\n1. 负责AI创新产品的需求分析、功能设计与迭代规划，独立撰写PRD\n2. 深度理解AI大模型能力边界，能将技术能力转化为产品方案\n3. 协调算法、工程、设计等多团队资源，推动产品从概念到上线\n4. 建立产品数据指标体系，通过数据分析驱动产品优化决策\n\n### 任职要求\n1. 本科及以上学历，2年以上互联网/AI产品经验\n2. 熟悉AI/LLM领域，对大模型应用有实际落地经验者优先\n3. 具备优秀的数据分析能力，熟练使用SQL、Python等数据分析工具\n4. 熟悉Axure/Figma等原型工具，能独立输出高质量PRD和交互原型\n5. 具备较强的逻辑思维和系统性思考能力，有自驱力、好奇心\n6. 计算机/AI相关专业背景或具备基础编程能力者优先"
+  },
+  "expected_output": {
+    "requirements": [
+      {
+        "id": "req-001",
+        "name": "AI产品需求与PRD",
+        "description": "负责AI创新产品的需求分析、功能设计与迭代规划，独立撰写PRD",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["AI创新产品", "需求分析", "PRD", "功能设计", "迭代规划"]
+      },
+      {
+        "id": "req-002",
+        "name": "AI大模型理解",
+        "description": "深度理解AI大模型能力边界，能将技术能力转化为产品方案",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["大模型", "能力边界", "产品方案", "AI"]
+      },
+      {
+        "id": "req-003",
+        "name": "多团队协作推进",
+        "description": "协调算法、工程、设计等多团队资源，推动产品从概念到上线",
+        "type": "must",
+        "importance": "medium",
+        "keywords": ["协调", "多团队", "概念到上线"]
+      },
+      {
+        "id": "req-004",
+        "name": "数据指标体系",
+        "description": "建立产品数据指标体系，通过数据分析驱动产品优化决策",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["数据指标", "数据分析", "产品优化"]
+      },
+      {
+        "id": "req-005",
+        "name": "学历与经验",
+        "description": "本科及以上学历，2年以上互联网/AI产品经验",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["本科", "2年", "互联网", "AI产品"]
+      },
+      {
+        "id": "req-006",
+        "name": "AI/LLM领域经验",
+        "description": "熟悉AI/LLM领域，对大模型应用有实际落地经验者优先",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["AI", "LLM", "大模型", "落地经验"]
+      },
+      {
+        "id": "req-007",
+        "name": "数据分析能力",
+        "description": "具备优秀的数据分析能力，熟练使用SQL、Python等数据分析工具（满足其一即可）",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["SQL", "Python", "数据分析"]
+      },
+      {
+        "id": "req-008",
+        "name": "原型与PRD输出",
+        "description": "熟悉Axure/Figma等原型工具，能独立输出高质量PRD和交互原型",
+        "type": "must",
+        "importance": "medium",
+        "keywords": ["Axure", "Figma", "PRD", "交互原型"]
+      },
+      {
+        "id": "req-009",
+        "name": "综合素质",
+        "description": "具备较强的逻辑思维和系统性思考能力，有自驱力、好奇心",
+        "type": "must",
+        "importance": "medium",
+        "keywords": ["逻辑思维", "自驱力", "好奇心", "系统性思考"]
+      },
+      {
+        "id": "req-010",
+        "name": "CS/AI专业或编程",
+        "description": "计算机/AI相关专业背景或具备基础编程能力者优先（满足其一即可）",
+        "type": "bonus",
+        "importance": "medium",
+        "keywords": ["计算机", "AI", "编程", "相关专业"]
+      }
+    ],
+    "parsing_notes": "JD信息完整，4条职责+6条任职要求均已覆盖。req-007和req-010含'等'/'或'逻辑，描述中已标注满足其一即可。"
+  }
+}

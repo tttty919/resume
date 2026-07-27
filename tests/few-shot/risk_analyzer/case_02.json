@@ -1,0 +1,33 @@
+{
+  "_description": "风险分析 Few-shot #2：AI研究员转型PM（王子轩匹配结果）— 展示技术极强但产品sense待验证的风险分析",
+  "input": {
+    "requirements_json": "[{\"id\":\"req-001\",\"name\":\"AI产品需求与PRD\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-002\",\"name\":\"AI大模型理解\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-005\",\"name\":\"学历与经验\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-007\",\"name\":\"数据分析能力\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-008\",\"name\":\"原型与PRD输出\",\"type\":\"must\",\"importance\":\"medium\"}]",
+    "validated_items_json": "[{\"requirement_id\":\"req-001\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\",\"needs_human_review\":false,\"confidence\":0.85,\"evidence\":\"独立完成智能投研助手V1.0的产品方案，包括需求梳理、竞品调研、功能设计和PRD编写\"},{\"requirement_id\":\"req-002\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\",\"needs_human_review\":false,\"confidence\":0.95,\"evidence\":\"设计Prompt模板与RAG知识库架构...参与书生通用大模型的SFT数据构建\"},{\"requirement_id\":\"req-005\",\"status\":\"cannot_judge\",\"evidence_support\":\"信息不足\",\"needs_human_review\":true,\"confidence\":0.50,\"reasoning\":\"仅1段4个月AI产品实习+1段AI训练实习（非产品岗）\"},{\"requirement_id\":\"req-007\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\",\"needs_human_review\":false,\"confidence\":0.90,\"evidence\":\"基于模型表现分析，提出训练数据配比优化方案，使模型提升4.2个百分点\"},{\"requirement_id\":\"req-008\",\"status\":\"cannot_judge\",\"evidence_support\":\"信息不足\",\"needs_human_review\":true,\"confidence\":0.45,\"reasoning\":\"PRD编写基础，Figma学习中，无实际项目原型证据\"}]",
+    "summary_text": "匹配汇总：5条要求，3满足(satisfied)，0不满足(not_satisfied)，2无法判断(cannot_judge)。必须项(must)：3满足，0不满足，2无法判断。需要HR复核的项：2条（req-005 学历与经验，req-008 原型与PRD输出）。低置信度项：req-008（confidence=0.45）"
+  },
+  "expected_output": {
+    "analysis": {
+      "core_advantages": [
+        "AI大模型技术能力顶尖（req-002）：参与书生大模型SFT数据构建+商汤RAG架构设计+ACL论文发表，从底层训练到上层应用全链路覆盖，远超岗位要求",
+        "驱动AI落地的能力极强：从模型训练到Prompt Engineering到RAG知识库搭建均具备实操经验，SFT数据配比优化使模型推理提升4.2pp",
+        "具备模型评测的体系化思维：设计50维LLM输出质量评测体系，覆盖事实准确性、逻辑连贯性、金融专业性——此能力在AI PM中极为稀缺",
+        "学术产出+竞赛实力：ACL 2026 Workshop论文（LLM-as-Judge可靠性研究）+Kaggle NLP银牌Top 5%，验证了系统性研究和快速学习能力"
+      ],
+      "key_risks": [
+        "【严重】产品经验年限明显不足（req-005，must/high）：仅4个月AI产品实习（商汤），无全职产品经验，远低于\"2年\"要求。另一段实习为AI训练岗（非产品）。若JD严格解读，此为硬伤",
+        "【中等】原型设计和交互输出能力薄弱（req-008，must/medium）：PRD编写标注\"基础\"，Figma标注\"学习中使用\"——说明尚未独立产出过高质量交互原型。面试需确认其产品文档和原型实际水平",
+        "【中等】产品思维 vs 技术思维的平衡：简历显示强技术偏好的思维模式（Scaling Law分析、SFT/LoRA微调），缺乏业务MRD、商业模式、GTM等产品战略层面的经历"
+      ],
+      "info_gaps": [
+        "原型与PRD的实际输出质量不明（req-008）：Figma\"学习中\"、PRD\"基础\"是基于什么标准自评的？不如其他候选人明确",
+        "产品经验深度有限（req-005）：仅一段产品岗实习，无法判断候选人能否独立主导0到1的产品全流程"
+      ],
+      "interview_suggestions": [
+        "[req-005] 你在商汤的产品实习周期只有4个月，是项目结束还是其他原因？你如何看待从AI研究转向AI产品的职业方向？",
+        "[req-008] 你说PRD\"基础\"、Figma\"学习中使用\"——能分享一下你在商汤写的PRD吗？或者展示一个你认为可以代表你当前设计水平的原型？",
+        "[req-002] 你在设计RAG知识库架构时，遇到过哪些产品层面的挑战（比如数据时效性、引用准确性）？你是如何平衡技术可行性和产品体验的？",
+        "[req-001] 如果让你从零负责一个AI产品功能，从用户问题定义到上线，你会走哪些步骤？你觉得之前的研究背景对你做产品有什么优势和劣势？"
+      ]
+    }
+  }
+}

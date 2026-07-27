@@ -1,0 +1,59 @@
+{
+  "_description": "JD解析 Few-shot #2：演示OR条件不拆分 + '者优先'不拆分 + 职责覆盖验证",
+  "input": {
+    "raw_jd": "### 岗位职责\n1. 负责B端SaaS产品的需求分析与功能设计，独立输出产品方案\n2. 与研发、测试、运营团队紧密配合，推动产品按期交付\n\n### 任职要求\n1. 本科及以上学历，3年以上B端产品经验\n2. 熟悉Python或Java或Go等至少一门编程语言\n3. 熟悉Axure/Figma，有B端SaaS经验者优先\n4. 对互联网产品有好奇心，自驱力强，具有优秀的洞察力、创新能力和判断力"
+  },
+  "expected_output": {
+    "requirements": [
+      {
+        "id": "req-001",
+        "name": "B端需求与方案",
+        "description": "负责B端SaaS产品的需求分析与功能设计，独立输出产品方案",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["B端", "SaaS", "需求分析", "产品方案"]
+      },
+      {
+        "id": "req-002",
+        "name": "跨团队协作交付",
+        "description": "与研发、测试、运营团队紧密配合，推动产品按期交付",
+        "type": "must",
+        "importance": "medium",
+        "keywords": ["研发", "测试", "运营", "按期交付"]
+      },
+      {
+        "id": "req-003",
+        "name": "学历与经验",
+        "description": "本科及以上学历，3年以上B端产品经验",
+        "type": "must",
+        "importance": "high",
+        "keywords": ["本科", "3年", "B端产品"]
+      },
+      {
+        "id": "req-004",
+        "name": "编程语言能力",
+        "description": "熟悉Python或Java或Go等至少一门编程语言（满足其一即可）",
+        "type": "must",
+        "importance": "medium",
+        "keywords": ["Python", "Java", "Go", "编程语言"]
+      },
+      {
+        "id": "req-005",
+        "name": "原型设计能力",
+        "description": "熟悉Axure/Figma，有B端SaaS经验者优先",
+        "type": "must",
+        "importance": "medium",
+        "keywords": ["Axure", "Figma", "B端", "SaaS"]
+      },
+      {
+        "id": "req-006",
+        "name": "综合素质",
+        "description": "对互联网产品有好奇心，自驱力强，具有优秀的洞察力、创新能力和判断力",
+        "type": "must",
+        "importance": "medium",
+        "keywords": ["好奇心", "自驱力", "洞察力", "创新力", "判断力"]
+      }
+    ],
+    "parsing_notes": "JD信息完整。注意：req-004（Python或Java或Go）OR条件未拆分；req-005（Axure/Figma+者优先）同句话未拆成两条；req-006软素质合并为一条而非逐词拆分。"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "_description": "推荐生成 Few-shot #2：AI研究员转型PM（王子轩）— 展示\"需人工复核\"场景 + 硬规则触发",
+  "input": {
+    "scoring_json": "{\"match_conclusion\":{\"tier_label\":\"需人工复核\",\"hard_rule_triggered\":true,\"must_summary\":{\"satisfied\":3,\"not_satisfied\":0,\"cannot_judge\":2}},\"confidence_assessment\":{\"needs_human_review\":true,\"human_review_reasons\":[\"[req-005]产品经验仅4个月（商汤实习），远低于2年要求\",\"[req-008]PRD基础+Figma学习中，无原型输出项目证据\"],\"low_confidence_items\":[{\"id\":\"req-008\",\"confidence\":0.45},{\"id\":\"req-005\",\"confidence\":0.50}]},\"evidence_quality\":{\"verified_rate\":0.60,\"hallucinated_count\":0},\"counts\":{\"satisfied\":3,\"not_satisfied\":0,\"cannot_judge\":2,\"must_satisfied\":3,\"must_not_satisfied\":0,\"must_cannot_judge\":2,\"must_total\":5},\"overall_score\":62}",
+    "risk_analysis_json": "{\"core_advantages\":[\"AI大模型技术能力顶尖：参与书生大模型SFT+商汤RAG架构+ACL论文，全链路覆盖\",\"驱动AI落地能力极强：SFT数据配比优化使推理提升4.2pp，有可验证成果\",\"具备模型评测的体系化思维：设计50维LLM输出质量评测体系\"],\"key_risks\":[\"产品经验年限严重不足：仅4个月AI产品实习\",\"原型设计和交互输出能力薄弱：PRD基础+Figma学习中\",\"技术思维vs产品思维的平衡待验证\"],\"info_gaps\":[\"原型与PRD实际输出质量不明\",\"产品经验深度有限\"],\"interview_suggestions\":[\"商汤4个月产品实习是项目结束还是其他原因？\",\"能分享你在商汤写的PRD吗？\",\"设计RAG架构时遇到过哪些产品层面挑战？\"]}",
+    "requirements_json": "[{\"id\":\"req-001\",\"name\":\"AI产品需求与PRD\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-002\",\"name\":\"AI大模型理解\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-005\",\"name\":\"学历与经验\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-007\",\"name\":\"数据分析能力\",\"type\":\"must\",\"importance\":\"high\"},{\"id\":\"req-008\",\"name\":\"原型与PRD输出\",\"type\":\"must\",\"importance\":\"medium\"}]",
+    "validated_items_json": "[{\"requirement_id\":\"req-001\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\"},{\"requirement_id\":\"req-002\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\"},{\"requirement_id\":\"req-005\",\"status\":\"cannot_judge\",\"evidence_support\":\"信息不足\"},{\"requirement_id\":\"req-007\",\"status\":\"satisfied\",\"evidence_support\":\"确凿\"},{\"requirement_id\":\"req-008\",\"status\":\"cannot_judge\",\"evidence_support\":\"信息不足\"}]"
+  },
+  "expected_output": {
+    "summary": {
+      "satisfied_count": 3,
+      "not_satisfied_count": 0,
+      "cannot_judge_count": 2,
+      "core_advantages": [
+        "AI大模型技术能力顶尖：大模型SFT+RAG架构+Prompt工程全链路实战，ACL论文发表",
+        "驱动AI落地的工程能力极强：SFT数据优化使推理提升4.2pp，Kaggle NLP银牌Top 5%",
+        "具备LLM评测体系化思维：设计50维输出质量评测体系，涵盖事实准确性、逻辑连贯性"
+      ],
+      "key_risks": [
+        "产品经验年限严重不足（req-005）：仅4个月AI产品实习，无全职产品经验",
+        "原型与PRD输出能力薄弱（req-008）：PRD基础+Figma学习中，无独立原型项目证据",
+        "技术思维占主导：缺乏业务MRD、商业模式等产品战略层面经验"
+      ],
+      "recommendation": "需人工复核",
+      "needs_human_review": true,
+      "human_review_questions": [
+        "[req-005] 候选人在商汤的产品实习仅4个月，是什么原因？是否有其他产品相关经历（如校内产品项目、创业等）未在简历中体现？",
+        "[req-008] 候选人PRD标注\"基础\"、Figma标注\"学习中使用\"——能否在二面中要求候选人现场完成一个简单的PRD框架和线框图？",
+        "[req-001] 候选人在商汤独立完成了智能投研助手的产品方案，这个方案从需求调研到最终评审经历了多长时间？跨了几个团队评审？",
+        "[req-002] 候选人的AI技术能力无疑很强，但作为PM需要平衡技术和产品——能举一个你在做产品决策时因为产品体验而放弃技术最优方案的例子吗？"
+      ]
+    },
+    "recommendation_reason": "3项满足，0项不满足，但2项必须项（学历与经验、原型与PRD输出）因证据不足标记为无法判断，触发了硬规则需人工复核。候选人AI大模型技术能力顶尖（SFT+RAG+Prompt全链路+ACL论文），在所有候选人中技术深度最强，但产品经验（仅4个月实习）和原型设计能力（PRD基础+Figma学习中）存在明显短板。建议HR优先电话确认产品经验年限和原型能力，如果候选人能证明具备独立产品输出能力，可从\"需复核\"升级为\"推荐面试\"。"
+  }
+}
