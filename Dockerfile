@@ -2,27 +2,28 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System deps for PyMuPDF
+# PyMuPDF 运行所需系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmupdf-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Python deps
+# Python 依赖
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# App code
+# 应用代码
 COPY backend/ ./backend/
 COPY skill-tester/ ./skill-tester/
 
-# Persistent data directories (mounted as volumes in production)
+# 持久化数据目录（生产环境挂载为 volume）
 RUN mkdir -p /app/data /app/uploads /app/chroma_data
 
-# HuggingFace cache (avoid re-download on restart)
+# HuggingFace 缓存（避免重启重复下载 embedding 模型）
 ENV HF_HOME=/app/hf_cache
 RUN mkdir -p /app/hf_cache
 
-# Railway sets PORT env var; fallback to 8766
+# 容器内对外监听所有网卡；Railway 会注入 PORT，本地 docker 回落到 8766
+ENV HOST=0.0.0.0
 EXPOSE 8766
 
-CMD ["sh", "-c", "python -m backend.dev_server"]
+CMD ["python", "-m", "backend.dev_server"]

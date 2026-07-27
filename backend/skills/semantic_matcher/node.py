@@ -298,6 +298,24 @@ async def match(
                 "status_changed": False,
             })
 
+    # Step 5: 证据来源溯源 —— 区分"简历原文摘录"与"LLM 推理/无实据"，
+    # 供评分引擎（scoring_engine.py）判断证据是否可信，避免推理结论被当成已验证证据。
+    for m in matches:
+        evidence_text = m.get("evidence", "")
+        support = m.get("evidence_support", "未找到")
+        if evidence_text and support in ("确凿", "部分"):
+            source_type = "resume_evidence"
+            verified = support == "确凿"
+        else:
+            source_type = "system_inference"
+            verified = False
+        m["evidence_sources"] = [{
+            "content": evidence_text or m.get("reasoning", ""),
+            "source_type": source_type,
+            "source_location": m.get("evidence_location", "") or "LLM 推理（未摘录原文）",
+            "verified": verified,
+        }]
+
     return safe_pydantic_validate({"matches": matches}, SemanticMatcherOutput, "SemanticMatcher")
 
 

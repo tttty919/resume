@@ -35,7 +35,27 @@ def score_matches(
     if not matches:
         return _empty_result()
 
-    req_map = {r.get("id", ""): r for r in requirements}
+    # 用 id 建主索引；同时用 name 建兜底索引：语义匹配偶尔会返回与原始要求
+    # 对不上的 requirement_id（LLM 复述偏差 / id 丢失），只按 id 查会让全部要求
+    # 落回默认的 "bonus"，导致「必须 0/0 · 加分 N」这类错误汇总。按名字兜底找回类型。
+    req_map = {}
+    req_by_name = {}
+    for r in requirements:
+        rid = r.get("id", "")
+        if rid:
+            req_map[rid] = r
+        name = (r.get("name") or "").strip()
+        if name and name not in req_by_name:
+            req_by_name[name] = r
+
+    def _resolve_req(m: dict) -> dict:
+        rid = m.get("requirement_id", "")
+        if rid and rid in req_map:
+            return req_map[rid]
+        name = (m.get("requirement_name") or "").strip()
+        if name and name in req_by_name:
+            return req_by_name[name]
+        return {}
 
     importance_weight = {"high": 3, "medium": 2, "low": 1}
 
@@ -51,7 +71,7 @@ def score_matches(
 
     for m in matches:
         rid = m.get("requirement_id", "")
-        req = req_map.get(rid, {})
+        req = _resolve_req(m)
         req_type = req.get("type", "bonus")
         importance = req.get("importance", "medium")
         status = m.get("status", "cannot_judge")

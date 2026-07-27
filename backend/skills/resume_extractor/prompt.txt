@@ -25,7 +25,7 @@
     {{"company": "公司名", "role": "职位", "duration": "起止时间", "responsibilities": ["职责原文1", "职责原文2"]}}
   ],
   "project_experiences": [
-    {{"name": "项目名", "tech_stack": ["技术"], "description": "项目原文", "responsibility": "个人职责原文"}}
+    {{"name": "项目名", "tech_stack": ["技术"], "description": "项目原文", "responsibility": ["个人职责原文1", "个人职责原文2"]}}
   ],
   "extraction_notes": "信息缺失说明"
 }}

@@ -4,7 +4,6 @@
 """
 
 import os as _os
-import re as _re
 if not _os.environ.get("HF_ENDPOINT"):
     _os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 if not _os.environ.get("HF_HUB_OFFLINE"):
@@ -26,42 +25,17 @@ EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
 SIMILARITY_THRESHOLD = 0.4
 
 
-def _space_persist_dir() -> Path:
-    """Space-aware ChromaDB persist directory."""
-    try:
-        from backend.utils.space import get_space
-        space = get_space()
-    except Exception:
-        space = "default"
-    safe = _re.sub(r"[^a-zA-Z0-9_-]", "_", space) or "default"
-    p = Path(f"chroma_data/{safe}")
-    p.mkdir(parents=True, exist_ok=True)
-    return p
-
-
 class ChromaClient:
-    """ChromaDB 持久化客户端封装（按空间隔离）"""
+    """ChromaDB 持久化客户端封装"""
 
     def __init__(self):
-        self._collection_name = get_settings().chromadb.collection_name
+        settings = get_settings()
+        self._persist_dir = Path(settings.chromadb.persist_dir)
+        self._collection_name = settings.chromadb.collection_name
         self._log = get_logger()
         self._client: PersistentClient | None = None
-        self._last_persist_dir: str = ""
         self._collection = None
         self._embed_fn: SentenceTransformerEmbeddingFunction | None = None
-
-    def _ensure_client(self):
-        """Recreate client if space changed."""
-        current_dir = str(_space_persist_dir())
-        if self._client is not None and current_dir == self._last_persist_dir:
-            return
-        self._client = PersistentClient(
-            path=current_dir,
-            settings=ChromaSettings(anonymized_telemetry=False),
-        )
-        self._last_persist_dir = current_dir
-        self._collection = None  # reset collection cache
-        self._log.info(f"ChromaDB 已连接: {current_dir}")
 
     @property
     def embed_fn(self) -> SentenceTransformerEmbeddingFunction:
@@ -79,29 +53,23 @@ class ChromaClient:
 
     @property
     def client(self) -> PersistentClient:
-        self._ensure_client()
+        if self._client is None:
+            self._persist_dir.mkdir(parents=True, exist_ok=True)
+            self._client = PersistentClient(
+                path=str(self._persist_dir),
+                settings=ChromaSettings(anonymized_telemetry=False),
+            )
+            self._log.info(f"ChromaDB 已连接: {self._persist_dir}")
         return self._client
 
     @property
     def collection(self):
-        self._ensure_client()
         if self._collection is None:
-            ef = None
-            try:
-                ef = self.embed_fn
-            except Exception:
-                self._log.warning("Embedding 模型不可用，ChromaDB 仅支持关键词检索")
-            try:
-                self._collection = self._client.get_or_create_collection(
-                    name=self._collection_name,
-                    embedding_function=ef,
-                    metadata={"description": "AI技能同义词知识库"},
-                )
-            except Exception:
-                self._collection = self._client.get_or_create_collection(
-                    name=self._collection_name,
-                    metadata={"description": "AI技能同义词知识库（无 embedding）"},
-                )
+            self._collection = self.client.get_or_create_collection(
+                name=self._collection_name,
+                embedding_function=self.embed_fn,
+                metadata={"description": "AI技能同义词知识库"},
+            )
         return self._collection
 
     def rebuild(self) -> None:

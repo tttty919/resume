@@ -52,11 +52,16 @@ async def generate(
     try:
         parsed = parse_llm_json(response.content)
     except ParseException:
-        result = {"summary": {}, "recommendation_reason": ""}
+        result = {"summary": {"recommendation": scoring["tier_label"]}, "recommendation_reason": ""}
         result["scoring"] = scoring
         return result
 
     result = safe_pydantic_validate(parsed, RecommendationGenOutput, "RecommendationGen")
+    # 推荐等级由评分引擎（硬规则）定级，LLM 只负责文本润色 —— 强制覆写，
+    # 防止 LLM 输出的 summary.recommendation 与 scoring.tier_label 不一致。
+    if not isinstance(result.get("summary"), dict):
+        result["summary"] = {}
+    result["summary"]["recommendation"] = scoring["tier_label"]
     result["scoring"] = scoring
     return result
 

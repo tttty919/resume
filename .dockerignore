@@ -1,0 +1,22 @@
+# 运行时数据 / 用户上传 / 向量库缓存，不进镜像
+data/
+uploads/
+chroma_data/
+hf_cache/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 环境与密钥（严禁打进镜像）
+.env
+.env.*
+
+# 前端依赖
+node_modules/
+
+# 版本控制与工具
+.git/
+.gitignore
+.DS_Store

@@ -25,7 +25,7 @@ class ProjectExperience(BaseModel):
     name: str = ""
     tech_stack: list[str] = Field(default_factory=list)
     description: str = ""
-    responsibility: str = ""
+    responsibility: list[str] = Field(default_factory=list, description="个人职责原文（逐条）")
 
 
 class ResumeExtractorOutput(BaseModel):

@@ -2,25 +2,17 @@
 
 import hashlib
 import json
-import re
 import sqlite3
 import time
 from pathlib import Path
 
 from backend.core.logger import get_logger
+from backend.utils.space import data_dir
 
 
 def _db_path() -> Path:
-    """Space-aware DB path. Falls back to 'default' if space not in context."""
-    try:
-        from backend.utils.space import get_space
-        space = get_space()
-    except Exception:
-        space = "default"
-    safe = re.sub(r"[^a-zA-Z0-9_-]", "_", space) or "default"
-    p = Path(__file__).resolve().parent.parent.parent / "data" / safe / "resume_cache.db"
-    p.parent.mkdir(parents=True, exist_ok=True)
-    return p
+    """当前 space 专属的简历缓存库；多租户下各用户互不串数据。"""
+    return data_dir() / "resume_cache.db"
 
 _CREATE_TABLE = """
 CREATE TABLE IF NOT EXISTS resume_cache (
@@ -176,6 +168,31 @@ def get_cached(file_path: str | Path) -> dict | None:
     if entry:
         return {"raw_text": entry["raw_text"], "parsed_resume": entry["parsed_resume"]}
     return None
+
+
+def search_by_name(name: str) -> list[dict]:
+    """Scan all cached resumes for a basic_info.name substring match (case-insensitive)."""
+    needle = (name or "").strip().lower()
+    if not needle:
+        return []
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT file_name, parsed_json, job_id, created_at FROM resume_cache ORDER BY created_at DESC",
+        ).fetchall()
+    finally:
+        conn.close()
+
+    hits = []
+    for file_name, parsed_json, job_id, created_at in rows:
+        try:
+            parsed = json.loads(parsed_json) if parsed_json else {}
+        except (TypeError, ValueError):
+            continue
+        candidate_name = ((parsed.get("basic_info") or {}).get("name") or "").strip()
+        if needle in candidate_name.lower():
+            hits.append({"name": candidate_name, "file_name": file_name, "job_id": job_id, "created_at": created_at})
+    return hits
 
 
 def clear():

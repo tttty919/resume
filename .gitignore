@@ -4,12 +4,11 @@
 # Uploaded resumes
 uploads/
 
-# Data (SQLite, knowledge files, job data) — now per-space: data/{space}/
+# Data (SQLite, knowledge files, job data)
 data/
 
-# Tests — only exclude resume data, keep eval scripts & labels
-tests/golden/resumes/
-tests/__pycache__/
+# Tests & evaluation
+tests/
 
 # ChromaDB vector data
 chroma_data/
@@ -17,6 +16,7 @@ chroma_data/
 # Python
 __pycache__/
 *.pyc
+.venv/
 
 # Temp files
 temp_advice.txt

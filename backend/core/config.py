@@ -17,7 +17,7 @@ class DeepSeekSettings(BaseSettings):
 
 class AppSettings(BaseSettings):
     """应用基础配置"""
-    host: str = "0.0.0.0"
+    host: str = "127.0.0.1"
     port: int = 8000
     dev_port: int = 8766
     llm_timeout: int = 60

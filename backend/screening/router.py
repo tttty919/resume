@@ -13,6 +13,7 @@ from backend.screening.session import (
 )
 from backend.core.config import get_settings
 from backend.core.logger import get_logger
+from backend.utils.space import upload_dir as _space_upload_dir
 from backend.tools.document_parser import document_parser
 from backend.tools.text_cleaner import clean_text
 from backend.storage.resume_store import save as cache_save
@@ -66,8 +67,7 @@ async def _process_screening(
     requirements = session.requirements
     session.phase = "processing"
     emit(sid, "phase", {"phase": "processing"})
-    from backend.utils.space import upload_dir as _space_upload
-    upload_dir = _space_upload()
+    upload_dir = _space_upload_dir(settings.app.upload_dir)
 
     for slot in session.candidates:
         idx = slot["index"]
@@ -186,8 +186,7 @@ async def screening_start(request: Request):
         return {"success": False, "message": "请填写 API Key"}
 
     # Load file content from upload dir
-    from backend.utils.space import upload_dir as _space_upload
-    upload_dir = _space_upload()
+    upload_dir = _space_upload_dir(settings.app.upload_dir)
     files_data: list[tuple[str, bytes]] = []
     candidate_names: list[str] = []
     for fm in files_meta:

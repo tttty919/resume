@@ -46,7 +46,6 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .btn{border:none;cursor:pointer;padding:11px 16px;border-radius:999px;font-weight:800;font-size:13px;transition:.15s}
 .btn:hover{transform:translateY(-1px)}
 .primary{background:var(--accent);color:#fff;box-shadow:0 12px 24px rgba(217,119,87,.16)}
-.btn.ghost,label.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
 .ghost{background:#fff;border:1px solid var(--line);color:#57534E}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.72);border:1px solid var(--line);color:#57534E;font-weight:700;font-size:13px}
 .tag-must{background:rgba(217,119,87,.12);color:#B4472C;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700}
@@ -104,7 +103,7 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .file-card span{color:var(--muted);font-size:12px}
 .file-del{border:none;background:rgba(220,38,38,.12);color:var(--danger);border-radius:999px;padding:6px 10px;font-weight:700;cursor:pointer;font-size:12px}
 .jd-panel{margin-top:18px}
-.jd-panel textarea{width:100%;border:1px solid var(--line);border-radius:18px;padding:14px;font:inherit;line-height:1.7;background:rgba(255,255,255,.82);outline:none;color:var(--text);min-height:380px;resize:vertical}
+.jd-panel textarea{width:100%;border:1px solid var(--line);border-radius:18px;padding:14px;font:inherit;line-height:1.7;background:rgba(255,255,255,.82);outline:none;color:var(--text);min-height:160px;resize:vertical}
 
 /* ===== Page 4: Loading ===== */
 .loading-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:500px;gap:24px}
@@ -131,6 +130,8 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .progress-card.expanded .progress-card-body{display:block}
 .review-entry-btn{padding:12px 20px;font-size:14px;margin-top:12px}
 #btnGoResults{align-self:flex-end;min-width:160px;justify-content:center;border-radius:14px}
+.pulse-highlight{animation:pulseHighlight 1s ease-in-out 2}
+@keyframes pulseHighlight{0%,100%{box-shadow:0 0 0 0 rgba(217,119,87,.55)}50%{box-shadow:0 0 0 6px rgba(217,119,87,0)}}
 
 /* Inline match items inside progress cards */
 .progress-match-item{display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,auto);gap:12px;align-items:center;padding:10px 12px;margin-bottom:6px;border-radius:12px;background:rgba(255,255,255,.62);font-size:12px}
@@ -252,14 +253,21 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .agent-question{font-size:12px;line-height:1.55;color:var(--text);padding:8px 10px;border-radius:10px;background:#fff;border:1px solid var(--line)}
 .agent-question-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}
 .chat-card{margin-bottom:18px}
-.chat-messages{max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px 14px}
+.chat-card h4{margin:0}
+.chat-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 16px}
+.chat-head-actions{display:flex;gap:8px}
+.chat-head-btn{border:1px solid var(--line);background:#fff;color:var(--muted);font-size:12px;font-weight:700;padding:6px 14px;border-radius:999px;cursor:pointer;transition:.16s}
+.chat-head-btn:hover:not(:disabled){color:var(--text);border-color:var(--accent)}
+.chat-head-btn:disabled{opacity:.45;cursor:default}
+#chatTerminateBtn:not(:disabled){color:var(--danger);border-color:rgba(220,80,60,.4)}
+.chat-messages{min-height:220px;max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:4px 2px 14px}
 .chat-bubble{max-width:78%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.6;white-space:pre-wrap}
 .chat-bubble.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
 .chat-bubble.assistant{align-self:flex-start;background:#FFF8F4;border:1px solid rgba(217,119,87,.14);color:var(--text);border-bottom-left-radius:4px}
-.chat-bubble.notice{align-self:center;color:var(--muted);font-size:12px;background:rgba(120,113,108,.06);border-radius:999px;padding:6px 14px;max-width:90%;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px}
-.chat-bubble.notice .chat-nav-btn,.chat-bubble.notice .chat-cancel-btn{margin-top:0}
-.chat-bubble .chat-nav-btn,.chat-bubble .chat-cancel-btn{display:inline-block;margin-top:8px;padding:6px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer}
-.chat-bubble .chat-nav-btn{background:var(--accent);color:#fff;margin-right:8px}
+.chat-bubble.notice{align-self:flex-start;background:#FFF8F4;border:1px solid rgba(217,119,87,.14);color:var(--text);border-bottom-left-radius:4px}
+.chat-bubble-actions{display:inline;margin-left:6px;white-space:nowrap}
+.chat-bubble .chat-nav-btn,.chat-bubble .chat-cancel-btn{display:inline-block;margin-left:6px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;cursor:pointer}
+.chat-bubble .chat-nav-btn{background:var(--accent);color:#fff}
 .chat-bubble .chat-cancel-btn{background:#fff;border:1px solid var(--line);color:var(--muted)}
 .chat-dropzone{border:1.5px dashed rgba(120,113,108,.22);border-radius:14px;padding:10px;transition:.2s}
 .chat-dropzone.drag-over{border-color:var(--accent);background:rgba(255,240,235,.5)}
@@ -308,6 +316,7 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .cand-expand{display:none;padding:0 18px 18px;border-top:1px solid var(--line);margin:0 18px}
 .cand-expand.open{display:block;padding-top:16px}
 .expand-content{display:grid;grid-template-columns:1fr 1fr;gap:18px;font-size:13px}
+.cand-review-footer{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .expand-title{font-size:13px;font-weight:900;color:var(--text);margin-bottom:10px}
 .expand-left .dim-row{display:grid;grid-template-columns:1fr 170px auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(0,0,0,.04)}
 .dim-row .dim-name{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
@@ -536,19 +545,6 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .modal-subtitle{margin-top:6px;font-size:13px;color:var(--muted);line-height:1.6}
 .modal-content{padding:24px 28px;max-height:calc(88vh - 90px);overflow-y:auto}
 
-/* Space Entry Modal */
-.space-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(6px);z-index:10000;align-items:center;justify-content:center}
-.space-overlay.show{display:flex}
-.space-dialog{background:#fff;border-radius:22px;border:1px solid var(--line);box-shadow:0 32px 80px rgba(0,0,0,.12);padding:32px 28px;max-width:420px;width:92%;text-align:center}
-.space-dialog h3{font-size:18px;margin-bottom:6px}
-.space-dialog p{color:var(--muted);font-size:13px;margin-bottom:18px;line-height:1.6}
-.space-dialog input{width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);font:inherit;font-size:15px;outline:none;text-align:center}
-.space-dialog input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(217,119,87,.10)}
-.space-dialog .btn{margin-top:14px;width:100%}
-.space-hint{font-size:11px;color:var(--muted);margin-top:10px}
-.space-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(217,119,87,.08);color:var(--accent);font-weight:700;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;border:1px solid rgba(217,119,87,.14);transition:.15s}
-.space-badge:hover{background:rgba(217,119,87,.14)}
-
 /* Jobs Page Enhanced */
 .jobs-toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
 .jobs-search{flex:1;min-width:200px;padding:12px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.72);font:inherit;outline:none;font-size:14px}
@@ -686,7 +682,7 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .empty-state .empty-icon svg{width:48px;height:48px}
 .empty-state h4{font-size:15px;font-weight:800;color:#57534E;margin-bottom:6px}
 .empty-state p{font-size:13px;color:var(--muted)}
-.bottom-actions{display:flex;gap:12px;justify-content:center;padding:24px 0 6px}
+.bottom-actions{display:flex;gap:12px;justify-content:flex-end;padding:24px 0 6px}
 .resume-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .resume-edit-field{display:grid;gap:6px}
 .resume-edit-field.full{grid-column:1/-1}
@@ -737,7 +733,6 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
   <div class="main">
     <div class="topbar">
       <div class="crumb" id="breadcrumb">工作台</div>
-      <div class="space-badge" id="spaceBadge" title="点击切换工作区" onclick="switchSpace()" style="display:none"></div>
     </div>
     <div class="content">
 
@@ -748,9 +743,10 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
             <div class="pill">F1 智能筛选</div>
             <h2>职位要求 × 候选人简历<br/><em>智能匹配分析</em></h2>
             <p>基于岗位要求和候选人简历，自动生成匹配结果、证据摘要和复核建议。HR 只需上传简历，即可快速查看候选人是否适合进入下一轮。</p>
-            <div style="margin-top:18px;display:flex;gap:10px">
-              <button class="btn primary" onclick="showPage('upload')">开始筛选</button>
+            <div style="margin-top:34px;display:flex;gap:10px">
+              <button class="btn primary" onclick="scrollToChatAssistant()">开始筛选</button>
               <button class="btn ghost" onclick="showPage('jobs')">配置职位</button>
+              <button class="btn ghost" onclick="scrollToChatAssistant()">智能助理</button>
             </div>
           </div>
           <div class="stat-grid">
@@ -761,7 +757,13 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
         </div>
 
         <div class="card chat-card" id="dashChatCard">
-          <h4>智能助理 <span style="font-size:11px;font-weight:400;color:var(--muted);cursor:pointer;float:right" onclick="clearChatMessages()" title="清空对话上下文">清空对话</span></h4>
+          <div class="chat-card-head">
+            <h4>智能助理</h4>
+            <div class="chat-head-actions">
+              <button class="chat-head-btn" id="chatTerminateBtn" onclick="chatTerminateActive()" disabled>终止</button>
+              <button class="chat-head-btn" onclick="chatClearConversation()">清空对话</button>
+            </div>
+          </div>
           <div class="chat-messages" id="chatMessages"></div>
           <div class="chat-dropzone" id="chatDropZone"
                ondragover="handleChatDragOver(event)"
@@ -770,10 +772,10 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
             <div class="chat-attachments" id="chatAttachments"></div>
             <div class="chat-input-row">
               <input type="text" id="chatInput" placeholder='说说你想做什么，比如"这是JD帮我录入"、"这10份简历和XX岗位匹配一下出报告"…' onkeydown="handleChatInputKeydown(event)" />
-              <label class="btn ghost" for="chatFileInput">附件</label>
+              <button class="btn ghost" onclick="document.getElementById('chatFileInput').click()">附件</button>
               <button class="btn primary" onclick="sendChatMessage()">发送</button>
             </div>
-            <input type="file" id="chatFileInput" multiple accept=".pdf,.docx,.doc,.txt" style="position:fixed;left:-9999px;top:-9999px" onchange="handleChatFileSelect(event)" />
+            <input type="file" id="chatFileInput" multiple accept=".pdf,.docx,.doc,.txt" style="display:none" onchange="handleChatFileSelect(event)" />
           </div>
         </div>
 
@@ -935,7 +937,6 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
                 <option value="">— 请先在职位管理中新建岗位 —</option>
               </select>
             </div>
-            <p class="hint">上传后系统将立即调用 Skill 2 解析简历，并关联到此岗位的评估流程。</p>
           </div>
 
           <div class="divider"></div>
@@ -1211,105 +1212,68 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
   </div>
 </div>
 
-<!-- Space Entry Modal -->
-<div class="space-overlay" id="spaceModal">
-  <div class="space-dialog">
-    <h3>欢迎使用 F1 智能筛选</h3>
-    <p>请输入你的工作区名称，你的数据将独立存储，不同工作区之间互不可见。</p>
-    <input id="spaceInput" type="text" placeholder="例如：研发一部、华东招聘组、demo" maxlength="40" autocomplete="off" />
-    <button class="btn primary" onclick="confirmSpace()">进入工作区</button>
-    <div class="space-hint">留空将使用默认工作区。之后可在 URL 后添加 <code>?space=名称</code> 切换。</div>
-  </div>
-</div>
-
 <script>
-// ===== Space Management (multi-tenant isolation) =====
-var SPACE = 'default';
-
-(function() {
-  var _origFetch = window.fetch;
-  window.fetch = function(url, opts) {
-    opts = opts || {};
-    var headers = opts.headers || {};
-    if (typeof url === 'string' && (url.indexOf('/api/') === 0 || url.indexOf('api/') === 0)) {
-      if (headers instanceof Headers) {
-        if (!headers.has('X-Space')) headers.set('X-Space', SPACE);
-      } else if (Array.isArray(headers)) {
-        if (!headers.some(function(h) { return h[0] === 'X-Space'; })) {
-          headers.push(['X-Space', SPACE]);
-        }
-      } else {
-        if (!headers['X-Space']) headers['X-Space'] = SPACE;
-      }
-      opts.headers = headers;
-    }
-    return _origFetch.call(window, url, opts);
-  };
-})();
-
-function getSpaceFromURL() {
-  var m = location.search.match(/[?&]space=([^&]+)/);
-  return m ? decodeURIComponent(m[1]) : '';
-}
-
-function initSpace() {
-  var urlSpace = getSpaceFromURL();
-  var storedSpace = localStorage.getItem('f1_space');
-  if (urlSpace) {
-    SPACE = urlSpace;
-    if (storedSpace !== urlSpace) localStorage.setItem('f1_space', urlSpace);
-    closeSpaceModal();
-    return;
+// ===== 多租户工作区隔离 =====
+// 每个用户用一个「工作区」标识隔离自己的职位/简历数据。标识来源优先级：
+// URL ?space= → localStorage → 首次访问弹窗询问。之后所有 /api 请求自动带上
+// X-Space 头（后端按它分目录存储），流式接口用 ?space= 兜底。
+(function () {
+  var urlSpace = (new URLSearchParams(location.search).get('space') || '').trim();
+  var SPACE = urlSpace || (localStorage.getItem('f1_space') || '').trim();
+  if (!SPACE) {
+    SPACE = (window.prompt('请输入你的工作区名称（用于隔离你自己的职位和简历数据，可用中文/字母/数字）：', '') || '').trim();
+    if (!SPACE) SPACE = 'default';
   }
-  if (storedSpace) {
-    SPACE = storedSpace;
-    // Update URL to reflect stored space
-    var url = new URL(location.href);
-    url.searchParams.set('space', storedSpace);
-    history.replaceState(null, '', url.toString());
-    closeSpaceModal();
-    return;
-  }
-  // No space set — show modal
-  showSpaceModal();
-}
-
-function showSpaceModal() {
-  document.getElementById('spaceModal').classList.add('show');
-  document.getElementById('spaceInput').focus();
-  document.getElementById('spaceInput').addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') confirmSpace();
-  });
-}
-
-function closeSpaceModal() {
-  document.getElementById('spaceModal').classList.remove('show');
-}
-
-function confirmSpace() {
-  var val = document.getElementById('spaceInput').value.trim();
-  SPACE = val || 'default';
   localStorage.setItem('f1_space', SPACE);
-  var url = new URL(location.href);
-  url.searchParams.set('space', SPACE);
-  history.replaceState(null, '', url.toString());
-  closeSpaceModal();
-  updateSpaceBadge();
-  // Reload data for this space
-  loadJobs();
-  renderResumeList();
-  renderRecentActivities();
-}
+  window.__SPACE__ = SPACE;
+  window.switchWorkspace = function () {
+    var s = (window.prompt('切换工作区（换一个名称即进入另一套独立数据）：', SPACE) || '').trim();
+    if (s && s !== SPACE) { localStorage.setItem('f1_space', s); location.reload(); }
+  };
 
-function switchSpace() {
-  localStorage.removeItem('f1_space');
-  SPACE = 'default';
-  var url = new URL(location.href);
-  url.searchParams.delete('space');
-  history.replaceState(null, '', url.toString());
-  document.getElementById('spaceInput').value = '';
-  showSpaceModal();
-}
+  // 注入 X-Space 头到所有同源 /api 请求（覆盖全部 fetch 调用，无需逐处改）
+  var _origFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    var url = (typeof input === 'string') ? input : (input && input.url) || '';
+    if (url.indexOf('/api/') !== -1 || url.charAt(0) === '/') {
+      init = init || {};
+      var h = new Headers(init.headers || (typeof input !== 'string' && input.headers) || {});
+      h.set('X-Space', encodeURIComponent(window.__SPACE__));  // 编码，避免中文触发非 ISO-8859-1 报错
+      init.headers = h;
+    }
+    return _origFetch(input, init);
+  };
+
+  // EventSource 无法带自定义头 → 用 ?space= 查询参数兜底（当前前端未用，留作保险）
+  if (window.EventSource) {
+    var _OrigES = window.EventSource;
+    var Patched = function (u, c) {
+      if (typeof u === 'string' && u.indexOf('/api/') !== -1) {
+        u += (u.indexOf('?') === -1 ? '?' : '&') + 'space=' + encodeURIComponent(window.__SPACE__);
+      }
+      return new _OrigES(u, c);
+    };
+    Patched.prototype = _OrigES.prototype;
+    window.EventSource = Patched;
+  }
+
+  // 右下角常驻显示当前工作区 + 一键切换
+  function _mountBadge() {
+    if (document.getElementById('f1-space-badge')) return;
+    var b = document.createElement('div');
+    b.id = 'f1-space-badge';
+    b.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:99999;font-size:12px;background:rgba(30,30,40,.85);color:#cbd5e1;padding:6px 10px;border-radius:8px;font-family:system-ui,sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.3)';
+    var safe = (window.__SPACE__ || 'default').replace(/[<>&]/g, '');
+    b.innerHTML = '工作区: <b style="color:#fff">' + safe + '</b> <a href="#" style="color:#7dd3fc;margin-left:6px;text-decoration:none">切换</a>';
+    b.querySelector('a').onclick = function (e) { e.preventDefault(); window.switchWorkspace(); };
+    document.body.appendChild(b);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _mountBadge);
+  } else {
+    _mountBadge();
+  }
+})();
 
 // ===== Runtime Data =====
 const JOBS = [];
@@ -1361,6 +1325,28 @@ function computeRecommendationFor(matchItems, requirements) {
   if (score >= 70) return {text:'建议进入下一轮', cls:'rec-good', reason:'必须项全部满足，匹配度较高'};
   if (score >= 45) return {text:'可考虑', cls:'rec-review', reason:'匹配度中等，建议HR评估'};
   return {text:'暂不推荐', cls:'rec-bad', reason:'匹配度偏低'};
+}
+
+/**
+ * 优先采用后端评分引擎（scoring_engine）的权威结论，避免前端在“岗位要求列表尚未加载/
+ * 无法与 reqId 对齐”时用 computeRecommendationFor 重算，得到与分数、满足项数不一致的结果
+ * （典型 bug：100 分 / 12 项满足却显示“暂不推荐”）。后端无 scoring 时才回退到本地重算。
+ */
+function recFromScoring(c) {
+  var s = (c && c.scoring) || {};
+  var mc = s.match_conclusion || {};
+  var tier = s.tier || mc.tier;
+  var label = s.tier_label || mc.tier_label;
+  if (!tier) return null;
+  var mustNot = (mc.must_summary && mc.must_summary.not_satisfied) || 0;
+  var map = {
+    recommend:    {text: label || '推荐面试',   cls:'rec-good',   reason:'必须项全部满足，匹配度较高'},
+    consider:     {text: label || '可考虑',     cls:'rec-review', reason:'匹配度中等，建议 HR 评估'},
+    needs_review: {text: label || '需人工复核', cls:'rec-review', reason:'存在必须项无法判断'},
+    not_recommend:{text: label || '暂不推荐',   cls:'rec-bad',    reason: mustNot ? '存在必须项不满足' : '匹配度偏低'},
+    insufficient_data: {text: label || '数据不足', cls:'rec-review', reason:'匹配数据不足'}
+  };
+  return map[tier] || {text: label || '需人工复核', cls:'rec-review', reason:''};
 }
 
 /** 平均置信度（只用于判断是否需要人工复核，不参与匹配分） */
@@ -1444,6 +1430,7 @@ function showPage(pageId) {
   if(idx >= 0) document.querySelectorAll('.nav button')[idx].classList.add('active');
   if(pageId === 'dashboard') { loadJobs(); refreshDashboard(); }
   if(pageId === 'jobs') { loadJobs(); }
+  if(pageId === 'upload') { renderResumeList(); }
   if(pageId === 'settings') { loadLLMSettings(); }
   if(pageId === 'results') {
     if(!resultsActiveTab) resultsActiveTab = 'review';
@@ -2014,12 +2001,12 @@ function filterResumes() {
 }
 
 function renderResumeList() {
-  var count = document.getElementById('resumeCount');
-  if(count) count.textContent = screenState.candidates.length;
   var list = document.getElementById('resumeList');
   if(!list) return;
   var q = ((document.getElementById('searchInput') || {}).value || '').toLowerCase();
-  var candidates = screenState.candidates || [];
+  var candidates = getAllScreenCandidates();
+  var count = document.getElementById('resumeCount');
+  if(count) count.textContent = candidates.length;
   var filtered = candidates;
   if(q) {
     filtered = candidates.filter(function(c) {
@@ -2039,7 +2026,31 @@ function renderResumeList() {
   if(!filtered.length) {
     list.innerHTML = '<div class="empty-state"><h4>未找到匹配的候选人</h4><p>尝试调整搜索关键词</p></div>';
   } else {
-    list.innerHTML = filtered.map(renderResumeRow).join('');
+    var jobSel = document.getElementById('targetJobSelect');
+    var fallbackJobId = jobSel ? jobSel.value : '';
+    var groups = {};
+    var order = [];
+    filtered.forEach(function(c) {
+      var jid = c.job_id || fallbackJobId || 'default';
+      if(!groups[jid]) { groups[jid] = []; order.push(jid); }
+      groups[jid].push(c);
+    });
+    list.innerHTML = order.map(function(jobId) {
+      var groupCandidates = groups[jobId];
+      var first = groupCandidates[0] || {};
+      var jobName = first.jobName || getJobName(jobId === 'default' ? fallbackJobId : jobId) || '未命名岗位';
+      var doneCount = groupCandidates.filter(function(c) { return c.status === 'done' || (c.resume && c.resume.basic_info); }).length;
+      return '' +
+      '<div class="job-result-card">' +
+        '<div class="job-result-head">' +
+          '<div class="job-result-icon">' + uiIcon('briefcase') + '</div>' +
+          '<div><div class="job-result-title">' + escHtml(jobName) + '</div><div class="job-result-meta">' + groupCandidates.length + ' 份简历 · ' + doneCount + ' 份已解析</div></div>' +
+        '</div>' +
+        '<div class="preview-candidate-list">' +
+          groupCandidates.map(renderResumeRow).join('') +
+        '</div>' +
+      '</div>';
+    }).join('');
   }
   var bottom = document.getElementById('bottomActions');
   if(bottom) bottom.style.display = candidates.some(function(c) { return c.status === 'done'; }) ? 'flex' : 'none';
@@ -2053,10 +2064,13 @@ function renderResumeRow(c) {
   var school = basic.school || '';
   var major = basic.major || '';
   var role = basic.current_role || '';
-  var statusHtml = c.status === 'done'
-    ? '<span class="ri-tag parsed">' + uiIcon('check') + '解析完成</span>'
-    : c.status === 'error'
-      ? '<span class="ri-tag error">' + uiIcon('alert') + '解析失败</span>'
+  // 解析真正完成的标志：拿到了结构化简历数据（resume_parsed 事件回填），或整条流水线已 done。
+  // 匹配/风险/推荐阶段虽然 status 不是 'done'，但简历早已解析好，这里同样显示“解析完成”。
+  var isParsed = c.status === 'done' || !!(c.resume && c.resume.basic_info);
+  var statusHtml = c.status === 'error'
+    ? '<span class="ri-tag error">' + uiIcon('alert') + '解析失败</span>'
+    : isParsed
+      ? '<span class="ri-tag parsed">' + uiIcon('check') + '解析完成</span>'
       : '<span class="ri-tag pending">' + uiIcon('loader') + '解析中</span>';
   var meta = [statusHtml, c.parseTime || '', c.fileName || '', [degree, school, major].filter(Boolean).join(' · ')].filter(Boolean).join('');
   var skillHtml = skills.length ? '<div class="ri-skills">' + skills.map(function(s) { return '<span class="ri-skill">' + escHtml(s) + '</span>'; }).join('') + '</div>' : '';
@@ -2800,15 +2814,15 @@ function candidateNeedsHR(candidate) {
 function normalizeAgentQuestions(candidate) {
   var list = [];
   (candidate.agentPendingHR || []).forEach(function(q) {
-    if(typeof q === 'string') list.push(q);
+    if(typeof q === 'string') list.push(stripReqTag(q));
     else if(q && (q.question || q.message || q.requirement_name)) {
-      list.push(q.question || q.message || ('请确认：' + q.requirement_name));
+      list.push(stripReqTag(q.question || q.message || ('请确认：' + q.requirement_name)));
     }
   });
   (candidate.human_review_questions || []).forEach(function(q) {
-    if(typeof q === 'string') list.push(q);
+    if(typeof q === 'string') list.push(stripReqTag(q));
     else if(q && (q.question || q.message || q.requirement_name)) {
-      list.push(q.question || q.message || ('请确认：' + q.requirement_name));
+      list.push(stripReqTag(q.question || q.message || ('请确认：' + q.requirement_name)));
     }
   });
   var seen = {};
@@ -3278,7 +3292,23 @@ function handleSSEEvent(event, data, taskId) {
           addAgentTrace(cand, agentPhaseLabel(data.sub_step), data.message || 'Agent 正在处理候选人状态');
           updateProgressCard(data.index);
           refreshResultsPreviewIfActive();
+          chatCheckPhaseTransition();
         }
+      }
+      break;
+
+    case 'resume_parsed':
+      // 后端在“解析真正完成、进入匹配之前”发来的事件，携带解析好的简历数据。
+      // 收到即把数据挂到候选人身上——此时列表可显示“解析完成”并有真实内容，
+      // “简历已经解析”通知与“查看解析结果”也才名副其实。
+      var rp = screenState.candidates.find(function(x) { return x.index === data.index; });
+      if(rp) {
+        rp.resume = data.resume || rp.resume;
+        if(data.raw_text) rp.raw_text = data.raw_text;
+        rp.name = data.name || rp.name;
+        rp.parsed = true;
+        renderResumeList();
+        chatCheckPhaseTransition();
       }
       break;
 
@@ -3303,8 +3333,7 @@ function handleSSEEvent(event, data, taskId) {
         updateProgressBar();
         checkAllReviewed();
         refreshResultsPreviewIfActive();
-        // Chat feedback — post progress for chat-initiated sessions
-        _notifyChatProgress(taskId, c, screenState.completed, screenState.total);
+        chatCheckPhaseTransition();
       }
       break;
 
@@ -3319,17 +3348,13 @@ function handleSSEEvent(event, data, taskId) {
         updateProgressBar();
         checkAllReviewed();
         refreshResultsPreviewIfActive();
+        chatCheckPhaseTransition();
       }
       break;
 
     case 'complete':
-      if (screenState.completed < screenState.total) {
-        console.warn('Complete event ignored: only ' + screenState.completed + '/' + screenState.total + ' done');
-        break;
-      }
       screenState.running = false;
       persistActiveScreenTasks();
-      delete _chatProgressNotified[taskId];
       var sBtn = document.getElementById('startScreeningBtn');
       if(sBtn) { sBtn.disabled = false; sBtn.textContent = '重新匹配'; }
       checkAllReviewed();
@@ -3341,7 +3366,6 @@ function handleSSEEvent(event, data, taskId) {
       screenState.running = false;
       screenState.cancelled = true;
       persistActiveScreenTasks();
-      delete _chatProgressNotified[taskId];
       var sBtn2c = document.getElementById('startScreeningBtn');
       if(sBtn2c) { sBtn2c.disabled = false; sBtn2c.textContent = '重新匹配'; }
       refreshResultsPreviewIfActive();
@@ -3460,22 +3484,26 @@ function renderInlineReview(index, targetBodyId) {
   var c = screenState.candidates.find(function(x) { return x.index === index; });
   var body = document.getElementById(targetBodyId || ('pbody-' + index));
   if(!c || !body) return;
+  // The review-preview card (results page, reviewBody-* ids) is the HR-facing "confirm this
+  // candidate" surface — the internal Agent自主处理/pause-resume trace log is only meaningful
+  // on the progress page's own inline review, so skip it here to cut noise.
+  var showAgentPanel = !/^reviewBody-/.test(targetBodyId || '');
 
   var matches = Array.isArray(c.matches) ? c.matches : [];
   if(matches.length === 0) {
-    body.innerHTML = renderAgentPanel(c) + '<p style="color:var(--muted);padding:8px 0">暂无匹配数据</p>';
+    body.innerHTML = (showAgentPanel ? renderAgentPanel(c) : '') + '<p style="color:var(--muted);padding:8px 0">暂无匹配数据</p>';
     return;
   }
 
   var reqs = screenState.requirements || [];
   var reqMap = {};
-  reqs.forEach(function(r) { reqMap[r.id || r.name] = r; });
+  reqs.forEach(function(r) { if(r.id) reqMap[r.id] = r; if(r.name) reqMap[r.name] = r; });
 
   var notSatisfied = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'not_satisfied'; });
   var cannotJudge = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'cannot_judge'; });
   var satisfied = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'satisfied'; });
 
-  var html = renderAgentPanel(c);
+  var html = showAgentPanel ? renderAgentPanel(c) : '';
   // Summary with scoring rules
   if(c.scoring && c.scoring.counts) {
     var sc = c.scoring.counts;
@@ -3512,25 +3540,51 @@ function renderInlineReview(index, targetBodyId) {
       '</div>';
   }
 
-  // Not satisfied — always visible
+  // locked：已确认(_reviewed) 或 已跑过一键计算但尚未确认(_recalculated) —— 两者都代表
+  // 本轮 HR 逐项改判已经"生效锁定"，不应该再让 满足/不满足/无法判断/填写说明 可点，
+  // 也和"已满足项"一样折叠收起，只有"确认该候选人结果"这一步还留着。
+  var locked = !!c._reviewed || !!c._recalculated;
+  // 折叠分组头：点击标题展开/收起对应 body（与"已满足项"同款交互）
+  function _groupToggle(blockId, label, color) {
+    return '<div style="font-weight:700;font-size:12px;margin:10px 0 6px;cursor:pointer;color:' + color + '" onclick="var e=document.getElementById(\'' + blockId + '\');var t=this.querySelector(\'span\');if(e.style.display===\'none\'){e.style.display=\'block\';t.textContent=\'▼\'}else{e.style.display=\'none\';t.textContent=\'▶\'}">' +
+      '<span>▶</span> ' + label + '</div>';
+  }
+
+  // 不满足项 / 无法判断：尚未锁定时始终展开（HR 需要据此逐项操作）；
+  // 锁定后（已确认，或已跑过一键计算等待最终确认）像"已满足项"一样折叠收起，按钮也不可再点。
   if(notSatisfied.length > 0) {
-    html += '<div style="font-weight:800;font-size:12px;margin:10px 0 6px;color:var(--muted)">不满足项 (' + notSatisfied.length + ')</div>';
-    html += notSatisfied.map(function(m) { return _renderMatchItem(c.index, m, reqMap); }).join('');
+    if(locked) {
+      var nsId = 'notSatBlock-' + index;
+      html += _groupToggle(nsId, '不满足项 (' + notSatisfied.length + ')', 'var(--muted)') +
+        '<div id="' + nsId + '" style="display:none">' +
+        notSatisfied.map(function(m) { return _renderMatchItem(c.index, m, reqMap, locked); }).join('') +
+        '</div>';
+    } else {
+      html += '<div style="font-weight:800;font-size:12px;margin:10px 0 6px;color:var(--muted)">不满足项 (' + notSatisfied.length + ')</div>';
+      html += notSatisfied.map(function(m) { return _renderMatchItem(c.index, m, reqMap, locked); }).join('');
+    }
   }
 
   // Cannot judge
   if(cannotJudge.length > 0) {
-    html += '<div style="font-weight:700;font-size:12px;margin:10px 0 6px;color:var(--warn)">无法判断 (' + cannotJudge.length + ')</div>';
-    html += cannotJudge.map(function(m) { return _renderMatchItem(c.index, m, reqMap); }).join('');
+    if(locked) {
+      var cjId = 'cjBlock-' + index;
+      html += _groupToggle(cjId, '无法判断 (' + cannotJudge.length + ')', 'var(--warn)') +
+        '<div id="' + cjId + '" style="display:none">' +
+        cannotJudge.map(function(m) { return _renderMatchItem(c.index, m, reqMap, locked); }).join('') +
+        '</div>';
+    } else {
+      html += '<div style="font-weight:700;font-size:12px;margin:10px 0 6px;color:var(--warn)">无法判断 (' + cannotJudge.length + ')</div>';
+      html += cannotJudge.map(function(m) { return _renderMatchItem(c.index, m, reqMap, locked); }).join('');
+    }
   }
 
   // Satisfied — collapsible
   if(satisfied.length > 0) {
     var satId = 'satisfiedBlock-' + index;
-    html += '<div style="font-weight:700;font-size:12px;margin:10px 0 6px;cursor:pointer;color:var(--good)" onclick="var e=document.getElementById(\'' + satId + '\');var t=this.querySelector(\'span\');if(e.style.display===\'none\'){e.style.display=\'block\';t.textContent=\'▼\'}else{e.style.display=\'none\';t.textContent=\'▶\'}">' +
-      '<span>▶</span> 已满足项 (' + satisfied.length + ')</div>' +
+    html += _groupToggle(satId, '已满足项 (' + satisfied.length + ')', 'var(--good)') +
       '<div id="' + satId + '" style="display:none">' +
-      satisfied.map(function(m) { return _renderMatchItem(c.index, m, reqMap); }).join('') +
+      satisfied.map(function(m) { return _renderMatchItem(c.index, m, reqMap, locked); }).join('') +
       '</div>';
   }
 
@@ -3538,19 +3592,32 @@ function renderInlineReview(index, targetBodyId) {
   var actionable = notSatisfied.concat(cannotJudge);
   if(actionable.length > 0) {
     var actionTaskId = screenState.taskId || screenState.sessionId || activeScreenTaskId || '';
-    html += '<div class="progress-card-actions">' +
-      '<span style="font-size:11px;color:var(--muted);line-height:28px">逐项确认或修改后：</span>' +
-      '<button class="btn primary" onclick="confirmCandidateReview(' + index + ',\'' + attr(actionTaskId) + '\')" style="padding:6px 16px;font-size:12px">确认该候选人复核</button>' +
-      '</div>';
+    var hasPending = Object.keys(screenState.overrides).some(function(k) {
+      return k.split('-')[0] === String(index);
+    });
+    var actionsInner;
+    if(c._reviewed) {
+      actionsInner = '<span style="font-size:11px;color:var(--muted);line-height:28px">已确认该候选人结果</span>' +
+        '<button class="btn" disabled style="padding:6px 16px;font-size:12px;background:var(--line);color:var(--muted);cursor:default;box-shadow:none">一键计算</button>' +
+        '<button class="btn" disabled style="padding:6px 16px;font-size:12px;background:var(--line);color:var(--muted);cursor:default;box-shadow:none">已确认 ✓</button>';
+    } else if(hasPending) {
+      actionsInner = '<span style="font-size:11px;color:var(--muted);line-height:28px">有未生效的修改：</span>' +
+        '<button class="btn primary" id="recalcBtn-' + index + '" onclick="runFinalRecalculate(' + index + ',\'' + attr(actionTaskId) + '\')" style="padding:6px 16px;font-size:12px">一键计算</button>' +
+        '<button class="btn primary" disabled title="请先点击「一键计算」获取最终结果" style="padding:6px 16px;font-size:12px;opacity:.45;cursor:not-allowed">确认该候选人结果</button>';
+    } else {
+      actionsInner = '<span style="font-size:11px;color:var(--muted);line-height:28px">' + (locked ? '已完成一键计算，' : '') + '逐项确认或修改后：</span>' +
+        '<button class="btn primary" onclick="confirmCandidateReview(' + index + ',\'' + attr(actionTaskId) + '\')" style="padding:6px 16px;font-size:12px">确认该候选人结果</button>';
+    }
+    html += '<div class="progress-card-actions">' + actionsInner + '</div>';
   }
 
   body.innerHTML = html;
 }
 
-function _renderMatchItem(candIdx, m, reqMap) {
+function _renderMatchItem(candIdx, m, reqMap, locked) {
   var taskId = screenState.taskId || screenState.sessionId || activeScreenTaskId || '';
   var rid = m.requirement_id || m.reqId || '';
-  var req = reqMap[rid] || {};
+  var req = reqMap[rid] || reqMap[(m.requirement_name || '').trim()] || {};
   var reqName = req.name || m.requirement_name || rid || '—';
   var status = m.status || 'cannot_judge';
   var statusCls = status === 'satisfied' ? 'pmi-satisfied' : status === 'not_satisfied' ? 'pmi-not-satisfied' : 'pmi-cannot-judge';
@@ -3582,12 +3649,13 @@ function _renderMatchItem(candIdx, m, reqMap) {
     '<div class="pmi-status">' +
       '<span class="' + displayStatusCls + '">' + displayLabel + '</span>' +
       (isOverridden ? '<div style="font-size:10px;color:#92400e;margin-top:2px">已修改</div>' : '') +
+      (locked ? '' :
       '<div class="pmi-actions">' +
         '<button class="pmi-action ' + (displayStatus === 'satisfied' ? 'active' : '') + '" onclick="event.stopPropagation();overrideMatchInline(\'' + overrideKey + '\',\'' + rid + '\',\'satisfied\',\'' + attr(taskId) + '\')">满足</button>' +
         '<button class="pmi-action ' + (displayStatus === 'not_satisfied' ? 'active' : '') + '" onclick="event.stopPropagation();overrideMatchInline(\'' + overrideKey + '\',\'' + rid + '\',\'not_satisfied\',\'' + attr(taskId) + '\')">不满足</button>' +
         '<button class="pmi-action ' + (displayStatus === 'cannot_judge' ? 'active' : '') + '" onclick="event.stopPropagation();overrideMatchInline(\'' + overrideKey + '\',\'' + rid + '\',\'cannot_judge\',\'' + attr(taskId) + '\')">无法判断</button>' +
         '<button class="pmi-action note" onclick="event.stopPropagation();openHROverride(\'cand-' + candIdx + '\',\'' + rid + '\',\'' + attr(taskId) + '\')">填写说明</button>' +
-      '</div>' +
+      '</div>') +
     '</div>' +
   '</div>';
 }
@@ -3645,6 +3713,8 @@ function overrideMatchInline(overrideKey, requirementId, newStatus, taskId) {
     screenState.overrides[overrideKey] = { requirementId: requirementId, newStatus: newStatus, reason: '' };
   }
   var candIdx = parseInt(overrideKey.split('-')[0]);
+  var c = screenState.candidates.find(function(x) { return x.index === candIdx; });
+  if(c) c._recalculated = false;
   recalculateScore(candIdx);
   updateProgressCard(candIdx);
   var reviewKey = String(taskId || activeScreenTaskId || 'active').replace(/[^a-zA-Z0-9_-]/g, '_') + '-' + candIdx;
@@ -3673,7 +3743,7 @@ function recalculateScore(index) {
 
   var reqs = screenState.requirements || [];
   var reqMap = {};
-  reqs.forEach(function(r) { reqMap[r.id || r.name] = r; });
+  reqs.forEach(function(r) { if(r.id) reqMap[r.id] = r; if(r.name) reqMap[r.name] = r; });
 
   var impW = { high: 3, medium: 2, low: 1 };
 
@@ -3685,7 +3755,7 @@ function recalculateScore(index) {
   for(var i = 0; i < c.matches.length; i++) {
     var m = c.matches[i];
     var rid = m.requirement_id || m.reqId || '';
-    var req = reqMap[rid] || {};
+    var req = reqMap[rid] || reqMap[(m.requirement_name || '').trim()] || {};
     var reqType = req.type || 'bonus';
     var importance = req.importance || 'medium';
 
@@ -3773,6 +3843,111 @@ function recalculateScore(index) {
   };
 }
 
+async function runFinalRecalculate(index, taskId) {
+  var task = getScreenTask(taskId);
+  if(task) screenState = task;
+  var c = screenState.candidates.find(function(x) { return x.index === index; });
+  if(!c) return;
+
+  var pending = [];
+  Object.keys(screenState.overrides).forEach(function(k) {
+    var parts = k.split('-');
+    if(parts[0] === String(index)) {
+      var ov = screenState.overrides[k];
+      pending.push({
+        requirement_id: ov.requirementId,
+        new_status: ov.newStatus,
+        reason: ov.reason || 'HR 页面改判',
+        supplementary_evidence: ov.supplementaryEvidence || ''
+      });
+    }
+  });
+  if(!pending.length) return;
+
+  var operator = localStorage.getItem('f1LastHROperator') || 'HR';
+
+  var btn = document.getElementById('recalcBtn-' + index);
+  if(btn) { btn.disabled = true; btn.textContent = '计算中…'; }
+
+  var validatedForAudit = (c._backend && (c._backend.validated_items || c._backend.matches) || c.matches || []).map(function(item) {
+    return {
+      requirement_id: item.requirement_id || item.reqId || '',
+      status: item.status || 'cannot_judge',
+      confidence: item.confidence || 0,
+      evidence: item.evidence || '',
+      evidence_source: item.evidence_source || 'resume_evidence',
+      evidence_sources: item.evidence_sources || (item.evidence ? [{
+        content: item.evidence,
+        source_type: item.evidence_source || 'resume_evidence',
+        source_location: item.evidence_location || '',
+        verified: item.validation ? item.validation.verified : false
+      }] : [])
+    };
+  });
+
+  try {
+    var response = await fetch('/api/hr-override-batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(Object.assign({
+        run_id: c.runId || '',
+        candidate_id: 'cand-' + index,
+        operator: operator,
+        overrides: pending,
+        validated_items: validatedForAudit,
+        requirements: screenState.requirements || [],
+        matches: c.matches || []
+      }, getLLMRequestConfig()))
+    });
+    var payload = await response.json();
+    if(!response.ok || !payload.success) throw new Error(payload.message || '一键计算失败');
+
+    var data = payload.data || {};
+    var records = data.override_records || [];
+    records.forEach(function(rec) {
+      var m = c.matches.find(function(x) { return (x.requirement_id || x.reqId) === rec.requirement_id; });
+      if(m) {
+        m.status = rec.after_status;
+        m._hr_overridden = true;
+        if(rec.supplementary_evidence) {
+          m.evidence_source = 'hr_verified_evidence';
+          m.evidence = rec.supplementary_evidence;
+        }
+      }
+      delete screenState.overrides[index + '-' + rec.requirement_id];
+    });
+
+    if(data.recommendation && data.recommendation.scoring) {
+      c.scoring = data.recommendation.scoring;
+    }
+    if(data.risk_analysis) {
+      c.analysis = data.risk_analysis;
+    }
+    c._recalculated = true;
+
+    addAgentTrace(c, 'HR 复核', '一键计算完成：批量更新 ' + records.length + ' 项，已重新生成推荐结果');
+    addRecentActivity('<b>' + c.name + '</b> 完成一键计算，共更新 ' + records.length + ' 项要求');
+  } catch(err) {
+    alert('一键计算失败：' + (err.message || err));
+    if(btn) { btn.disabled = false; btn.textContent = '一键计算'; }
+    return;
+  }
+
+  updateProgressCard(index);
+  var reviewKey = String(taskId || activeScreenTaskId || 'active').replace(/[^a-zA-Z0-9_-]/g, '_') + '-' + index;
+  if(document.getElementById('reviewBody-' + reviewKey)) {
+    renderInlineReview(index, 'reviewBody-' + reviewKey);
+    renderResultsReviewPreview();
+  } else {
+    renderInlineReview(index);
+  }
+  if(resultsActiveTab === 'final') {
+    syncReviewedCandidates(screenState.resultsReleased);
+    renderResults();
+  }
+  persistActiveScreenTasks();
+}
+
 function confirmCandidateReview(index, taskId) {
   return withScreenTask(taskId, function() {
   var c = screenState.candidates.find(function(x) { return x.index === index; });
@@ -3802,7 +3977,25 @@ function confirmCandidateReview(index, taskId) {
     renderResultsPage();
   }
   persistActiveScreenTasks();
+  // 确认后把「查看最终结果」入口滚到眼前——它一直存在但常在页面下方，HR 不一定注意到。
+  focusFinalResultsEntry();
   });
+}
+
+// Scrolls the currently-visible "查看最终结果" entry into view and briefly highlights it, so the
+// HR knows where to go after confirming a candidate (the button is always present but easy to miss).
+function focusFinalResultsEntry() {
+  setTimeout(function() {
+    var candidates = [document.getElementById('btnGoResults')]
+      .concat(Array.prototype.slice.call(document.querySelectorAll('.review-entry-btn')));
+    var btn = candidates.filter(Boolean).find(function(el) {
+      return el.offsetParent !== null && getComputedStyle(el).display !== 'none';
+    });
+    if(!btn) return;
+    btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    btn.classList.add('pulse-highlight');
+    setTimeout(function() { btn.classList.remove('pulse-highlight'); }, 2000);
+  }, 60);
 }
 
 function checkAllReviewed() {
@@ -3852,6 +4045,14 @@ function goToFinalResults() {
   var sub = document.querySelector('#pg-results .results-header span');
   if(sub) sub.textContent = CANDIDATES.length + ' 位候选人 · 复核完成于 ' + new Date().toLocaleString('zh-CN');
   addRecentActivity('HR 复核完成，' + CANDIDATES.length + ' 位候选人结果已确认');
+}
+
+// Reachable from the review tab itself (chat-initiated flow lands on #pg-results, never
+// #pg-progress, so #btnGoResults there is invisible) — activates the right job's task before
+// releasing final results, since goToFinalResults() acts on whatever task is currently active.
+function goToFinalResultsForJob(taskId) {
+  if(taskId && screenTasks[taskId]) activateScreenTask(taskId);
+  goToFinalResults();
 }
 
 async function confirmAllReviews() {
@@ -4030,6 +4231,7 @@ function mapScreenCandidate(c, index) {
     reviewQuestions: (c.human_review_questions || analysis.interview_suggestions || []).map(q => typeof q === 'string' ? q : (q.suggestion || '')),
     needsReview: false,
     reviewLog: [],
+    scoring: c.scoring || {},
     _score: scoring.overall_score
   };
 }
@@ -4080,10 +4282,20 @@ function renderRecentActivities() {
 }
 
 // ===== Dashboard Chat =====
-let dashboardChatMessages = [];   // { role: 'user'|'assistant'|'notice', content, nav, sessionId, cancellable }
+let dashboardChatMessages = [
+  { role: 'assistant', content: '你好，我可以帮你录入JD、批量筛选简历出报告，或者查询/取消正在进行的任务。说说你想做什么？' }
+];   // { role: 'user'|'assistant'|'notice', content, nav, sessionId, cancellable }
+
+function scrollToChatAssistant() {
+  var card = document.getElementById('dashChatCard');
+  if(card) card.scrollIntoView({behavior:'smooth', block:'start'});
+  var input = document.getElementById('chatInput');
+  if(input) setTimeout(function(){ input.focus(); }, 400);
+}
 let chatAttachedFiles = [];
 let chatActiveSessions = [];      // { session_id, job_name }
 let chatSending = false;
+let chatTaskNoticeRef = {};        // session_id -> the "任务已启动" notice message object, so we can retract its cancel button later
 
 function renderChatMessages() {
   var el = document.getElementById('chatMessages');
@@ -4091,21 +4303,45 @@ function renderChatMessages() {
   el.innerHTML = dashboardChatMessages.map(function(m) {
     var cls = m.role === 'user' ? 'user' : (m.role === 'notice' ? 'notice' : 'assistant');
     var extra = '';
-    if(m.nav) extra += '<span class="chat-nav-btn" onclick="showPage(\'' + m.nav.page + '\')">' + escHtml(m.nav.label) + '</span>';
-    if(m.cancellable && m.sessionId) extra += '<span class="chat-cancel-btn" onclick="cancelChatSession(\'' + m.sessionId + '\')">取消任务</span>';
-    var extraHtml = extra ? (cls === 'notice' ? ' ' + extra : '<div>' + extra + '</div>') : '';
-    return '<div class="chat-bubble ' + cls + '">' + escHtml(m.content) + extraHtml + '</div>';
+    if(m.nav) extra += '<span class="chat-nav-btn" onclick="chatNavTo(\'' + m.nav.page + '\',\'' + attr(m.nav.taskId || '') + '\')">' + escHtml(m.nav.label) + '</span>';
+    // 取消/终止任务不再作为气泡里的按钮出现——统一收到对话框右上角的「终止」按钮（chatTerminateActive）。
+    if(m.reviewChoice) {
+      extra += '<span class="chat-nav-btn" onclick="chatGoReview(\'' + attr(m.reviewChoice.taskId) + '\')">去复核</span>';
+      extra += '<span class="chat-cancel-btn" onclick="chatSkipReview(\'' + attr(m.reviewChoice.taskId) + '\',\'' + attr(m.reviewChoice.jobName) + '\')">跳过</span>';
+    }
+    return '<div class="chat-bubble ' + cls + (extra && cls === 'notice' ? ' has-actions' : '') + '">' + formatChatContent(m.content) + (extra ? '<span class="chat-bubble-actions">' + extra + '</span>' : '') + '</div>';
   }).join('');
   el.scrollTop = el.scrollHeight;
+  updateChatHeadButtons();
 }
 
-function clearChatMessages() {
-  dashboardChatMessages = [];
-  chatAttachedFiles = [];
-  chatActiveSessions = [];
-  _chatProgressNotified = {};
+// Chat bubbles render escaped plain text, so any markdown the assistant emits shows up as raw
+// symbols. Convert **bold** to <strong> and drop stray ** markers so the output reads cleanly.
+function formatChatContent(text) {
+  var safe = escHtml(text == null ? '' : String(text));
+  safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return safe.replace(/\*\*/g, '');
+}
+
+// The 终止 button is only meaningful while a chat-initiated screening task is running.
+function updateChatHeadButtons() {
+  var btn = document.getElementById('chatTerminateBtn');
+  if(btn) btn.disabled = !(chatActiveSessions && chatActiveSessions.length);
+}
+
+// 终止：取消所有由对话发起、仍在进行中的筛选任务。
+function chatTerminateActive() {
+  var sessions = (chatActiveSessions || []).slice();
+  if(!sessions.length) return;
+  sessions.forEach(function(s) { cancelChatSession(s.session_id); });
+}
+
+// 清空对话：把助理对话重置到初始问候语（不影响正在进行的任务本身）。
+function chatClearConversation() {
+  dashboardChatMessages = [
+    { role: 'assistant', content: '你好，我可以帮你录入JD、批量筛选简历出报告，或者查询/取消正在进行的任务。说说你想做什么？' }
+  ];
   renderChatMessages();
-  renderChatAttachments();
 }
 
 function renderChatAttachments() {
@@ -4155,10 +4391,20 @@ function handleChatInputKeydown(event) {
 
 var CHAT_TOOL_LABELS = {
   enter_jd: '正在录入JD并解析岗位要求…',
+  enter_resume: '正在录入简历…',
   start_screening: '正在启动批量筛选…',
   get_task_status: '正在查询任务进度…',
-  cancel_task: '正在取消任务…'
+  cancel_task: '正在取消任务…',
+  get_job_detail: '正在查询岗位信息…',
+  get_job_candidates: '正在查询候选人数据…',
+  find_candidate: '正在查询简历库…'
 };
+
+function computeChatReviewState() {
+  return getAllScreenCandidates().map(function(c) {
+    return { job_id: c.job_id || '', name: c.name || '', file_name: c.fileName || c.file_name || '', reviewed: !!c._reviewed };
+  });
+}
 
 async function sendChatMessage() {
   if(chatSending) return;
@@ -4166,17 +4412,20 @@ async function sendChatMessage() {
   var text = (input.value || '').trim();
   if(!text && chatAttachedFiles.length === 0) return;
 
-  dashboardChatMessages.push({ role: 'user', content: text || ('（发送了 ' + chatAttachedFiles.length + ' 个附件）') });
-  input.value = '';
   var filesToSend = chatAttachedFiles.slice();
-  chatAttachedFiles = [];
-  renderChatAttachments();
+  var bubbleText = text || ('（发送了 ' + filesToSend.length + ' 个附件）');
+  if(text && filesToSend.length) bubbleText += '（附件：' + filesToSend.map(function(f) { return f.name; }).join('、') + '）';
+  dashboardChatMessages.push({ role: 'user', content: bubbleText });
+  input.value = '';
+  // Attachments stay pending (not cleared here) until a tool call actually consumes them below —
+  // otherwise a clarifying question from the assistant would silently discard the uploaded file.
 
   var pending = { role: 'assistant', content: '正在思考…' };
   dashboardChatMessages.push(pending);
   renderChatMessages();
 
   chatSending = true;
+  var filesConsumed = false;
   try {
     var historyPayload = dashboardChatMessages
       .filter(function(m) { return (m.role === 'user' || m.role === 'assistant') && m !== pending; })
@@ -4185,6 +4434,7 @@ async function sendChatMessage() {
     var form = new FormData();
     form.append('history', JSON.stringify(historyPayload));
     form.append('active_sessions', JSON.stringify(chatActiveSessions));
+    form.append('review_state', JSON.stringify(computeChatReviewState()));
     filesToSend.forEach(function(f) { form.append('files', f); });
     appendLLMConfig(form);
 
@@ -4212,7 +4462,10 @@ async function sendChatMessage() {
             pending.content = CHAT_TOOL_LABELS[data.name] || ('正在执行 ' + data.name + '…');
             renderChatMessages();
           } else if(currentEvent === 'tool_result') {
-            handleChatToolResult(data.name, data.result);
+            if(filesToSend.length && data.result && data.result.success && (data.name === 'enter_jd' || data.name === 'enter_resume' || data.name === 'start_screening')) {
+              filesConsumed = true;
+            }
+            handleChatToolResult(data.name, data.result, filesToSend);
           } else if(currentEvent === 'navigation') {
             pendingNav = data;
           } else if(currentEvent === 'assistant_text') {
@@ -4228,111 +4481,229 @@ async function sendChatMessage() {
     renderChatMessages();
   } finally {
     chatSending = false;
+    if(filesConsumed) {
+      chatAttachedFiles = chatAttachedFiles.filter(function(f) { return filesToSend.indexOf(f) === -1; });
+      renderChatAttachments();
+    }
   }
 }
 
-function handleChatToolResult(name, result) {
+function handleChatToolResult(name, result, filesForTurn) {
   if(name === 'enter_jd' && result && result.success) {
     loadJobs();
+  } else if(name === 'enter_resume' && result) {
+    var job = JOBS.find(function(j) { return j.id === result.job_id; }) || {};
+    var jobName = result.job_name || job.name || '';
+    var taskId = 'resume-entry-' + result.job_id;
+    var task = screenTasks[taskId];
+    if(!task) {
+      task = makeEmptyScreenState({ jobId: result.job_id, jobName: jobName, requirements: job.requirements || [] });
+      task.isChat = true;
+      rememberScreenTask(task, taskId);
+    } else {
+      activateScreenTask(taskId);
+    }
+    var startIdx = task.candidates.length;
+    (result.results || []).forEach(function(r, i) {
+      var resume = r.resume || null;
+      task.candidates.push({
+        index: startIdx + i,
+        name: r.name || (resume && resume.basic_info && resume.basic_info.name) || r.file_name,
+        fileName: r.file_name,
+        status: r.success ? 'done' : 'error',
+        errorMsg: r.error || '',
+        resume: resume,
+        job_id: result.job_id,
+        jobName: jobName
+      });
+    });
+    task.total = task.candidates.length;
+    task.completed = task.candidates.length;
+    renderResumeList();
+
+    var okNames = (result.results || []).filter(function(r) { return r.success; })
+      .map(function(r) { return r.name || (r.resume && r.resume.basic_info && r.resume.basic_info.name) || r.file_name; });
+    var failCount = (result.results || []).filter(function(r) { return !r.success; }).length;
+    var msg;
+    if(okNames.length) {
+      msg = {
+        role: 'notice',
+        content: '简历已经解析并保存到《' + jobName + '》下（' + okNames.join('、') + '）' + (failCount ? '，另有 ' + failCount + ' 份解析失败' : ''),
+        nav: { page: 'upload', label: '查看解析结果', taskId: taskId }
+      };
+    } else {
+      msg = { role: 'notice', content: '简历解析失败了，麻烦确认一下文件是否正常，或换个文件再试试' };
+    }
+    dashboardChatMessages.push(msg);
+    renderChatMessages();
+    loadJobs();
+    refreshDashboard();
   } else if(name === 'start_screening' && result && result.success) {
     var job = JOBS.find(function(j) { return j.id === result.job_id; }) || {};
+    var candidates = (filesForTurn || []).map(function(f, i) {
+      return { index: i, name: f.name, fileName: f.name, status: 'waiting', steps: [],
+               job_id: result.job_id, jobName: result.job_name || job.name || '',
+               _taskId: result.session_id, sessionId: result.session_id };
+    });
     var task = makeEmptyScreenState({
       jobId: result.job_id,
       jobName: result.job_name || job.name || '',
       running: true,
       requirements: job.requirements || [],
-      candidates: [],
-      total: result.candidate_count || 0
+      candidates: candidates,
+      total: result.candidate_count || candidates.length
     });
+    task.isChat = true;
+    task.chatPhase = 'parsing';
     rememberScreenTask(task, result.session_id);
     connectSessionStream(result.session_id);
     chatActiveSessions.push({ session_id: result.session_id, job_name: result.job_name || job.name || '' });
-    dashboardChatMessages.push({
+    var msg = {
       role: 'notice',
       content: '筛选任务已启动（' + (result.job_name || '') + '，' + (result.candidate_count || 0) + ' 份简历）',
       sessionId: result.session_id,
       cancellable: true
-    });
+    };
+    dashboardChatMessages.push(msg);
+    chatTaskNoticeRef[result.session_id] = msg;
     renderChatMessages();
   } else if(name === 'cancel_task' && result && result.success) {
     chatActiveSessions = chatActiveSessions.filter(function(s) { return s.session_id !== result.session_id; });
   }
 }
 
-function cancelChatSession(sid) {
-  fetch('/api/session/' + encodeURIComponent(sid) + '/cancel', { method: 'POST' }).catch(function(e) { console.error('取消失败', e); });
+// 简历「真正解析完成并写入简历管理界面」的唯一可靠标志：拿到了结构化简历数据
+// （resume_parsed / candidate_done 回填后 renderResumeList 已把它渲染进界面）。
+// 只认真实数据——status 推进到“语义匹配/风险分析”等下游阶段并不代表简历已落到界面上，
+// 用 sub_step 状态判定会在简历还没写进界面时就误报“解析完成”，所以这里不再看 status。
+function chatCandidateParsed(c) {
+  return !!(c.resume && c.resume.basic_info);
 }
 
-// Called from handleSSEEvent's 'complete'/'cancelled' cases — only acts on sessions this chat panel started.
-// Post progress updates to chat for chat-initiated screening sessions.
-// Batched: only posts for first candidate, every 3rd, and the final one.
-var _chatProgressNotified = {};
-function _notifyChatProgress(sid, candidate, done, total) {
-  var active = chatActiveSessions.find(function(s) { return s.session_id === sid; });
-  if (!active) return;
-  if (!_chatProgressNotified[sid]) _chatProgressNotified[sid] = 0;
-  _chatProgressNotified[sid]++;
+// Fires once per chat-initiated task, the moment every candidate is resolved — either genuinely
+// parsed (the backend's resume_parsed event has回填 real data) or failed. Driven by parse data,
+// not by sub_step status, so it can't fire while a resume still lacks any parsed content.
+function chatCheckPhaseTransition() {
+  if(!screenState.isChat || screenState.chatPhase !== 'parsing') return;
+  var candidates = screenState.candidates || [];
+  if(!candidates.length) return;
+  // A candidate is unresolved until it's either parsed (has real resume data) or has errored.
+  var stillPending = candidates.some(function(c) { return !chatCandidateParsed(c) && c.status !== 'error'; });
+  if(stillPending) return;
 
-  var n = _chatProgressNotified[sid];
-  var shouldNotify = (n === 1) || (n % 3 === 0) || (done === total);
-  if (!shouldNotify) return;
+  var parsed = candidates.filter(chatCandidateParsed);
+  var failed = candidates.filter(function(c) { return !chatCandidateParsed(c); });
 
-  var needsHR = candidateNeedsHR(candidate) ? ' ⚠待复核' : ' ✓';
+  failed.forEach(function(c) {
+    dashboardChatMessages.push({ role: 'notice', content: '「' + (c.name || c.fileName) + '」解析失败：' + (c.errorMsg || '未知错误') });
+  });
+
+  if(!parsed.length) {
+    screenState.chatPhase = 'failed';
+    renderChatMessages();
+    return;
+  }
+
+  // 只有确认简历确实解析好、并已写入「简历管理」界面（chatCandidateParsed 只认真实简历数据）后，
+  // 才推送这条通知，并附带一个可直接查看简历的入口按钮。
+  var parsedNames = parsed.map(function(c) { return c.name || c.fileName; }).filter(Boolean);
+  var sid = screenState.sessionId || (candidates[0] && (candidates[0].sessionId || candidates[0]._taskId)) || '';
   dashboardChatMessages.push({
     role: 'notice',
-    content: '[' + done + '/' + total + '] ' + (candidate.name || '候选人') + ' 分析完成' + needsHR
+    content: '简历解析已经完成' + (parsedNames.length ? '（' + parsedNames.join('、') + '）' : '') + '，正在匹配，稍等一下～',
+    nav: { page: 'upload', label: '查看简历', taskId: sid }
   });
+  screenState.chatPhase = 'matching';
   renderChatMessages();
 }
 
+function cancelChatSession(sid) {
+  var ref = chatTaskNoticeRef[sid];
+  if(ref) { ref.cancelling = true; renderChatMessages(); }
+  fetch('/api/session/' + encodeURIComponent(sid) + '/cancel', { method: 'POST' })
+    .then(function(r) { return r.json().catch(function() { return {}; }); })
+    .then(function(data) {
+      if(!data || !data.success) {
+        if(ref) { ref.cancelling = false; ref.content += '（任务可能已结束，无法取消）'; renderChatMessages(); }
+      }
+      // On success we wait for the SSE 'cancelled' event (onChatSessionCancelled) to confirm and update the UI.
+    })
+    .catch(function(e) {
+      console.error('取消失败', e);
+      if(ref) { ref.cancelling = false; renderChatMessages(); }
+    });
+}
+
+// Called from handleSSEEvent's 'complete'/'cancelled' cases — only acts on sessions this chat panel started.
 function onChatSessionComplete(sid) {
   var entry = chatActiveSessions.find(function(s) { return s.session_id === sid; });
-  if(!entry) return;
+  var ref = chatTaskNoticeRef[sid];
+  if(ref) { ref.cancellable = false; ref.cancelling = false; delete chatTaskNoticeRef[sid]; }
+  if(!entry) { renderChatMessages(); return; }
   chatActiveSessions = chatActiveSessions.filter(function(s) { return s.session_id !== sid; });
 
-  var reviewCount = 0;
-  var totalDone = 0;
-  var summaryLines = [];
-  if (screenState && screenState.candidates) {
-    screenState.candidates.forEach(function(c) {
-      if (c.status === 'done' || c.status === 'paused') {
-        totalDone++;
-        if (candidateNeedsHR(c) && !c._reviewed) reviewCount++;
-        var score = (c.scoring && c.scoring.overall_score != null) ? c.scoring.overall_score : null;
-        var tier = (c.scoring && c.scoring.tier_label) || '';
-        var scoreStr = score != null ? ('得分 ' + (score * 100).toFixed(0) + '%') : '';
-        var tierStr = tier ? (' [' + tier + ']') : '';
-        summaryLines.push((c.name || '候选人') + '：' + scoreStr + tierStr);
-      }
-    });
-  }
+  var task = screenTasks[sid];
+  var candidates = task ? task.candidates : [];
+  var doneCandidates = candidates.filter(function(c) { return c.status === 'done'; });
 
-  var mainMsg = '《' + entry.job_name + '》筛选完成：' + totalDone + ' 人已分析';
-  if (summaryLines.length > 0) {
-    mainMsg += '\n' + summaryLines.join('\n');
-  }
-  dashboardChatMessages.push({ role: 'notice', content: mainMsg });
-
-  if (reviewCount > 0) {
+  if(!doneCandidates.length) {
     dashboardChatMessages.push({
       role: 'notice',
-      content: reviewCount + ' 人存在待确认项，建议 HR 复核后再查看结果',
-      nav: { page: 'results', label: '进入复核（' + reviewCount + '人）→' }
+      content: '《' + entry.job_name + '》本轮筛选没有生成有效结果，简历解析或匹配过程中出错了，麻烦确认一下文件是否正常，或换个文件再试试'
     });
+    renderChatMessages();
+    refreshDashboard();
+    return;
   }
 
-  dashboardChatMessages.push({
-    role: 'notice',
-    content: '可前往筛选结果页查看详细对比和每项要求的证据',
-    nav: { page: 'results', label: '查看筛选结果' }
-  });
+  var actionable = doneCandidates.filter(candidateNeedsHR);
+  if(actionable.length > 0) {
+    dashboardChatMessages.push({
+      role: 'notice',
+      content: '匹配完成，《' + entry.job_name + '》有 ' + actionable.length + ' 项需要复核',
+      reviewChoice: { taskId: sid, jobName: entry.job_name }
+    });
+  } else {
+    dashboardChatMessages.push({
+      role: 'notice',
+      content: '匹配完成，《' + entry.job_name + '》筛选已完成',
+      nav: { page: 'results', label: '查看筛选结果', taskId: sid }
+    });
+  }
   renderChatMessages();
   refreshDashboard();
 }
 
+function chatGoReview(taskId) {
+  activateScreenTask(taskId);
+  resultsActiveTab = 'review';
+  showPage('results');
+}
+
+// Generic nav button handler for chat notices — activates the specific task the notice is
+// about before navigating, since screenState may have moved on to a different task by the
+// time the HR actually clicks the button (otherwise the target page can show stale/empty data).
+function chatNavTo(page, taskId) {
+  if(taskId && screenTasks[taskId]) activateScreenTask(taskId);
+  showPage(page);
+}
+
+function chatSkipReview(taskId, jobName) {
+  activateScreenTask(taskId);
+  resultsActiveTab = 'final';
+  dashboardChatMessages.push({
+    role: 'notice',
+    content: '结果报告已出' + (jobName ? '，《' + jobName + '》' : '') + '，可以点击跳转到筛选结果',
+    nav: { page: 'results', label: '查看筛选结果', taskId: taskId }
+  });
+  renderChatMessages();
+}
+
 function onChatSessionCancelled(sid) {
   var entry = chatActiveSessions.find(function(s) { return s.session_id === sid; });
-  if(!entry) return;
+  var ref = chatTaskNoticeRef[sid];
+  if(ref) { ref.cancellable = false; ref.cancelling = false; delete chatTaskNoticeRef[sid]; }
+  if(!entry) { renderChatMessages(); return; }
   chatActiveSessions = chatActiveSessions.filter(function(s) { return s.session_id !== sid; });
   dashboardChatMessages.push({
     role: 'notice',
@@ -4469,6 +4840,12 @@ function renderResultsReviewPreview() {
     var jobName = first.jobName || getJobName(jobId === 'default' ? fallbackJobId : jobId) || '未命名岗位';
     var doneCount = groupCandidates.filter(function(c) { return c.status === 'done' || c.status === 'paused'; }).length;
     var reviewedCount = groupCandidates.filter(function(c) { return c._reviewed; }).length;
+    var actionableCandidates = groupCandidates.filter(function(c) { return (c.status === 'done' || c.status === 'paused') && candidateNeedsHR(c); });
+    var showFinalBtn = doneCount > 0 && (
+      (actionableCandidates.length > 0 && actionableCandidates.every(function(c) { return c._reviewed; })) ||
+      (actionableCandidates.length === 0)
+    );
+    var groupTaskId = first._taskId || first.sessionId || '';
     var sorted = groupCandidates.slice().sort(function(a, b) {
       if(a._reviewed !== b._reviewed) return a._reviewed ? 1 : -1;
       var as = (a.scoring && a.scoring.overall_score) || 0;
@@ -4481,6 +4858,7 @@ function renderResultsReviewPreview() {
         '<div class="job-result-icon">' + uiIcon('briefcase') + '</div>' +
         '<div><div class="job-result-title">' + escHtml(jobName) + '</div><div class="job-result-meta">' + groupCandidates.length + ' 位候选人 · ' + doneCount + ' 位已评估 · ' + reviewedCount + ' 位已确认</div></div>' +
         '<div class="job-result-actions">' +
+          (showFinalBtn ? '<button class="btn primary review-entry-btn" onclick="goToFinalResultsForJob(\'' + attr(groupTaskId) + '\')" style="padding:9px 15px;font-size:13px">查看最终结果 →</button>' : '') +
           '<button class="btn ghost" onclick="showPage(\'upload\')" style="padding:9px 15px;font-size:13px">重新匹配</button>' +
         '</div>' +
       '</div>' +
@@ -4561,7 +4939,7 @@ function renderDecisionPanel(candidate) {
   const total = candidate.matchItems.length;
   const score = computeScore(candidate.matchItems);
   const conf = avgConfidence(candidate.matchItems);
-  const rec = computeRecommendation(candidate.matchItems);
+  const rec = recFromScoring(candidate) || computeRecommendation(candidate.matchItems);
   const tier = getTierInfo(score, rec);
   candidate._score = score;
   candidate._rec = rec;
@@ -4675,6 +5053,12 @@ function renderMatchList(candidate) {
   }).join('');
 }
 
+function resolveFinalScore(c) {
+  if(c.scoring && typeof c.scoring.overall_score === 'number') return Math.round(c.scoring.overall_score * 100);
+  var localReqs = c.requirements && c.requirements.length ? c.requirements : JOB_REQUIREMENTS;
+  return computeScoreFor(c.matchItems, localReqs);
+}
+
 function renderResults() {
   // Ensure JOB_REQUIREMENTS is populated for dimension rendering
   if(!JOB_REQUIREMENTS.length && screenState.requirements && screenState.requirements.length) {
@@ -4698,11 +5082,11 @@ function renderResults() {
     updateCompareBar();
     return;
   }
-  var sorted = [].concat(CANDIDATES).sort(function(a,b) { return computeScore(b.matchItems) - computeScore(a.matchItems); });
+  var sorted = [].concat(CANDIDATES).sort(function(a,b) { return resolveFinalScore(b) - resolveFinalScore(a); });
   function renderFinalCandidateRow(c, i) {
     var localReqs = c.requirements && c.requirements.length ? c.requirements : JOB_REQUIREMENTS;
-    var score = computeScoreFor(c.matchItems, localReqs);
-    var rec = computeRecommendationFor(c.matchItems, localReqs);
+    var score = resolveFinalScore(c);
+    var rec = recFromScoring(c) || computeRecommendationFor(c.matchItems, localReqs);
     var confAvg = avgConfidence(c.matchItems);
     c._score = score; c._rec = rec;
     var satisfied = c.matchItems.filter(function(m) { return m.status === 'satisfied'; }).length;
@@ -4719,11 +5103,23 @@ function renderResults() {
     var focusItems = c.matchItems.filter(function(m) { return m.status !== 'satisfied' || (m.confidence || 0) < 0.65; }).slice(0, 5);
     if(focusItems.length === 0) focusItems = c.matchItems.slice(0, 3);
     var suggestions = (c.interview_suggestions && c.interview_suggestions.length ? c.interview_suggestions : (c.reviewQuestions || []).map(function(q) { return {suggestion:q}; })).slice(0, 5);
+    // 推进/暂缓/不推进 的操作项，放到整张卡片的右下角（见下方 cand-review-footer）。
+    var reviewControls = c._hrDecision ?
+      '<div style="padding:8px 14px;border-radius:12px;font-size:12px;font-weight:700;background:' + (c._hrDecision === 'approve' ? 'rgba(120,113,108,.08)' : c._hrDecision === 'hold' ? 'rgba(202,138,4,.08)' : 'rgba(120,113,108,.08)') + ';color:' + (c._hrDecision === 'hold' ? 'var(--warn)' : 'var(--muted)') + '">' +
+        (c._hrDecision === 'approve' ? '已同意推进' : c._hrDecision === 'hold' ? '已暂缓' : '不推进') +
+        '<span style="font-weight:400;font-size:10px;display:block;color:var(--muted)">' + (c._hrDecisionTime ? new Date(c._hrDecisionTime).toLocaleString('zh-CN') : '') + '</span>' +
+      '</div>'
+      :
+      '<button class="btn primary" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'approve\')" style="padding:8px 14px;font-size:12px">同意推进</button>' +
+      '<button class="btn ghost" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'hold\')" style="padding:8px 14px;font-size:12px">暂缓</button>' +
+      '<button class="btn ghost" style="padding:8px 14px;font-size:12px;color:var(--muted)" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'reject\')">不推进</button>';
     return '<div class="cand-row" id="cand-' + c.id + '">' +
       '<div class="cand-main" onclick="toggleExpand(\'' + c.id + '\')">' +
         '<div class="cand-rank">#' + (i + 1) + '</div>' +
         '<div class="cand-info">' +
-          '<div class="cand-name" style="font-size:14px">' + escHtml(c.name) + ' <span class="rec ' + rec.cls + '" id="rec-' + c.id + '" style="font-size:11px">' + rec.text + '</span></div>' +
+          '<div class="cand-name" style="font-size:14px">' + escHtml(c.name) + ' <span class="rec ' + rec.cls + '" id="rec-' + c.id + '" style="font-size:11px">' + rec.text + '</span>' +
+            (c._hrDecision ? ' <span class="rec ' + (c._hrDecision === 'approve' ? 'rec-good' : c._hrDecision === 'hold' ? 'rec-review' : 'rec-bad') + '" style="font-size:11px">HR: ' + (c._hrDecision === 'approve' ? '已同意推进' : c._hrDecision === 'hold' ? '已暂缓' : '不推进') + '</span>' : '') +
+          '</div>' +
           '<div class="cand-summary" style="font-size:11px">' + escHtml(c.summary) + '</div>' +
         '</div>' +
         '<div class="cand-score-col">' +
@@ -4745,7 +5141,6 @@ function renderResults() {
           '<div class="expand-left">' +
             '<div class="result-panel">' +
               '<div class="result-panel-head"><div><div class="expand-title">推荐理由</div><div class="result-panel-sub">' + rec.reason + ' · 平均置信度 ' + Math.round(confAvg * 100) + '%</div></div><span class="rec ' + rec.cls + '">' + rec.text + '</span></div>' +
-              '<div class="result-reason-text">' + escHtml(c.recommendation_reason || c.summary || '暂无推荐摘要，建议结合下方优势、风险和面试建议复核。') + '</div>' +
               '<div class="match-summary-grid">' +
                 '<div><b>' + satisfied + '</b><span>满足</span></div>' +
                 '<div><b>' + notSatisfied + '</b><span>不满足</span></div>' +
@@ -4756,8 +5151,7 @@ function renderResults() {
                 '<div><div class="mini-title">主要优势</div>' + (advantages.length ? advantages.map(function(a) { return '<div class="reason-item good">' + escHtml(a) + '</div>'; }).join('') : '<div class="empty-note">暂无明确优势摘要</div>') + '</div>' +
                 '<div><div class="mini-title">风险与待核实</div>' + (risks.length ? risks.map(function(r) { return '<div class="reason-item bad">' + escHtml(r) + '</div>'; }).join('') : '<div class="empty-note">暂无明显风险项</div>') + '</div>' +
               '</div>' +
-              '<details class="compact-match-list">' +
-                '<summary>查看需关注的匹配项</summary>' +
+              '<div class="compact-match-list">' +
                 focusItems.map(function(m) {
                 var req = localReqs.find(function(r) { return r.id === m.reqId; });
                 if(!req) return '';
@@ -4767,30 +5161,19 @@ function renderResults() {
                   '<span class="dim-status ' + (m.status || 'cannot_judge') + '">' + statusLabel + '</span>' +
                 '</div>';
               }).join('') +
-              '</details>' +
+              '</div>' +
             '</div>' +
           '</div>' +
           '<div class="expand-right">' +
             '<div class="expand-right-top result-panel">' +
               '<div class="expand-title">面试建议</div>' +
               '<div class="interview-list">' +
-                (suggestions.length ? suggestions.map(function(s, si) { return '<div class="interview-item"><b>' + (si + 1) + '</b><span>' + escHtml(s.suggestion || s.question || s) + '</span></div>'; }).join('') : '<div class="empty-note">暂无面试建议，可先围绕风险项进行 HR 复核。</div>') +
-              '</div>' +
-              '<div class="review-inline" style="margin-top:12px;padding:10px 0 0;margin-bottom:0;justify-content:flex-end">' +
-              (c._hrDecision ?
-                '<div style="padding:8px 14px;border-radius:12px;font-size:12px;font-weight:700;background:' + (c._hrDecision === 'approve' ? 'rgba(120,113,108,.08)' : c._hrDecision === 'hold' ? 'rgba(202,138,4,.08)' : 'rgba(120,113,108,.08)') + ';color:' + (c._hrDecision === 'hold' ? 'var(--warn)' : 'var(--muted)') + '">' +
-                  (c._hrDecision === 'approve' ? '已同意推进' : c._hrDecision === 'hold' ? '已暂缓' : '不推进') +
-                  '<span style="font-weight:400;font-size:10px;display:block;color:var(--muted)">' + (c._hrDecisionTime ? new Date(c._hrDecisionTime).toLocaleString('zh-CN') : '') + '</span>' +
-                '</div>'
-              :
-                '<button class="btn primary" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'approve\')" style="padding:8px 14px;font-size:12px">同意推进</button>' +
-                '<button class="btn ghost" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'hold\')" style="padding:8px 14px;font-size:12px">暂缓</button>' +
-                '<button class="btn ghost" style="padding:8px 14px;font-size:12px;color:var(--muted)" onclick="event.stopPropagation();handleReview(\'' + c.id + '\',\'reject\')">不推进</button>'
-              ) +
+                (suggestions.length ? suggestions.map(function(s, si) { return '<div class="interview-item"><b>' + (si + 1) + '</b><span>' + escHtml(stripReqTag(s.suggestion || s.question || s)) + '</span></div>'; }).join('') : '<div class="empty-note">暂无面试建议，可先围绕风险项进行 HR 复核。</div>') +
               '</div>' +
             '</div>' +
           '</div>' +
         '</div>' +
+        '<div class="cand-review-footer">' + reviewControls + '</div>' +
       '</div>' +
     '</div>';
   }
@@ -4840,7 +5223,7 @@ function exportResults(format) {
   var data = rows.map(function(c) {
     var localReqs = c.requirements && c.requirements.length ? c.requirements : JOB_REQUIREMENTS;
     var score = computeScoreFor(c.matchItems, localReqs);
-    var rec = computeRecommendationFor(c.matchItems, localReqs);
+    var rec = recFromScoring(c) || computeRecommendationFor(c.matchItems, localReqs);
     var conf = Math.round(avgConfidence(c.matchItems) * 100) + '%';
     var satisfied = c.matchItems.filter(function(m) { return m.status === 'satisfied'; }).length;
     var notSatisfied = c.matchItems.filter(function(m) { return m.status === 'not_satisfied'; }).length;
@@ -4925,7 +5308,7 @@ function startCompare() {
     const coreScore  = coreSkills.length ? Math.round(coreSkills.reduce((s,m)=>s+(m.match_degree||0)*100,0)/coreSkills.length) : 0;
     const auxScore   = auxSkills.length  ? Math.round(auxSkills.reduce((s,m)=>s+(m.match_degree||0)*100,0)/auxSkills.length)   : 0;
     const score = computeScore(c.matchItems);
-    const rec = computeRecommendation(c.matchItems);
+    const rec = recFromScoring(c) || computeRecommendation(c.matchItems);
     // 学历简写
     const eduShort = (c.education || '').split('·')[1]?.trim() || c.education || '—';
     // 描述：综合摘要 + 主要风险
@@ -4982,7 +5365,7 @@ function closeCompare() {
 function renderReviewQuestion(question, index, candidateId) {
   return `
     <div class="review-q" data-question="${candidateId}-${index}">
-      <div>${question}</div>
+      <div>${stripReqTag(question)}</div>
       <div class="review-q-actions">
         <button class="review-choice ok" onclick="event.stopPropagation();handleQuestionReview(this,'confirm')">确认满足</button>
         <button class="review-choice no" onclick="event.stopPropagation();handleQuestionReview(this,'deny')">不满足</button>
@@ -5043,7 +5426,7 @@ function closeHROverride() {
   document.getElementById('hrOverrideModal').classList.remove('show');
 }
 
-async function submitHROverride() {
+function submitHROverride() {
   var candidateId = document.getElementById('hrCandidateId').value;
   var reqId = document.getElementById('hrReqId').value;
   var operator = document.getElementById('hrOperator').value.trim();
@@ -5054,6 +5437,7 @@ async function submitHROverride() {
 
   if (!operator) { resultEl.style.display = 'block'; resultEl.innerHTML = '<span style="color:var(--danger)">请填写操作人</span>'; return; }
   if (!reason) { resultEl.style.display = 'block'; resultEl.innerHTML = '<span style="color:var(--danger)">请填写修改原因</span>'; return; }
+  localStorage.setItem('f1LastHROperator', operator);
 
   var candidate = CANDIDATES.find(function(x){return x.id === candidateId && (!currentHROverrideTaskId || x.sessionId === currentHROverrideTaskId);}) ||
     CANDIDATES.find(function(x){return x.id === candidateId;});
@@ -5069,109 +5453,52 @@ async function submitHROverride() {
   if (!matchItem) return;
 
   var beforeStatus = matchItem.status;
-  var validatedForAudit = (candidate._backend?.validated_items || candidate._backend?.matches || candidate.matchItems || []).map(function(item) {
-    return {
-      requirement_id: item.requirement_id || item.reqId || '',
-      status: item.status || 'cannot_judge',
-      confidence: item.confidence || 0,
-      evidence: item.evidence || '',
-      evidence_source: item.evidence_source || 'resume_evidence',
-      evidence_sources: item.evidence_sources || (item.evidence ? [{
-        content: item.evidence,
-        source_type: item.evidence_source || 'resume_evidence',
-        source_location: item.evidence_location || '',
-        verified: item.validation ? item.validation.verified : false
-      }] : [])
+
+  if (typeof candidate.index === 'number') {
+    // 只入队，不打后端——等 HR 点候选人卡片上的「一键计算」时才批量提交、只跑一次 Skill4+5
+    var overrideKey = candidate.index + '-' + reqId;
+    screenState.overrides[overrideKey] = {
+      requirementId: reqId,
+      newStatus: newStatus,
+      reason: reason,
+      supplementaryEvidence: evidence
     };
-  });
-  try {
-    const response = await fetch('/api/hr-override', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        run_id: candidate.runId || '',
-        candidate_id: candidate.id,
-        requirement_id: reqId,
-        operator: operator,
-        new_status: newStatus,
-        reason: reason,
-        supplementary_evidence: evidence,
-        validated_items: validatedForAudit,
-        requirements: JOB_REQUIREMENTS,
-        matches: candidate.matchItems || [],
-        ...getLLMRequestConfig()
-      })
-    });
-    const payload = await response.json();
-    if(!response.ok || !payload.success) throw new Error(payload.message || '复核审计保存失败');
-  } catch (err) {
-    resultEl.style.display = 'block';
-    resultEl.innerHTML = '<span style="color:var(--danger)">复核保存失败：' + escHtml(err.message || err) + '</span>';
-    return;
-  }
-
-  // 更新匹配项
-  matchItem.status = newStatus;
-  if (newStatus === 'satisfied') {
-    matchItem.match_degree = 0.65;
-    matchItem.confidence = 0.70;
-  } else if (newStatus === 'not_satisfied') {
-    matchItem.match_degree = 0;
-    matchItem.confidence = 0.85;
+    var realCand = screenState.candidates.find(function(x) { return x.index === candidate.index; });
+    if (realCand) realCand._recalculated = false;
+    recalculateScore(candidate.index);
+    updateProgressCard(candidate.index);
+    var reviewKey = String(currentHROverrideTaskId || activeScreenTaskId || 'active').replace(/[^a-zA-Z0-9_-]/g, '_') + '-' + candidate.index;
+    if (document.getElementById('reviewBody-' + reviewKey)) {
+      renderInlineReview(candidate.index, 'reviewBody-' + reviewKey);
+      renderResultsReviewPreview();
+    } else {
+      renderInlineReview(candidate.index);
+    }
+    if (resultsActiveTab === 'final') {
+      syncReviewedCandidates(screenState.resultsReleased);
+      renderResults();
+    }
+    persistActiveScreenTasks();
   } else {
-    matchItem.match_degree = 0;
-    matchItem.confidence = 0.50;
-  }
-  // 更新验证状态
-  if (!matchItem.validation) matchItem.validation = {};
-  matchItem.status_changed = true;
-  matchItem.validation.verified = true;
-  matchItem.validation.match_type = 'exact';
-  matchItem.validation.similarity = 1.0;
-  if (evidence) {
-    matchItem.evidence_source = 'hr_verified_evidence';
-    matchItem.evidence = evidence;
-    matchItem.evidence_support = '确凿';
-    matchItem.evidence_location = 'HR确认补充';
-  }
-  matchItem.reasoning = 'HR复核: ' + reason;
-
-  var screenMatch = null;
-  if (/^cand-\d+$/.test(candidateId)) {
-    var screenIndex = parseInt(candidateId.replace('cand-', ''), 10);
-    var taskForOverride = getScreenTask(currentHROverrideTaskId);
-    var screenCandidate = ((taskForOverride && taskForOverride.candidates) || screenState.candidates || []).find(function(x) { return x.index === screenIndex; });
-    if (screenCandidate && Array.isArray(screenCandidate.matches)) {
-      screenMatch = screenCandidate.matches.find(function(m) {
-        return (m.requirement_id || m.reqId || '') === reqId;
-      });
-      if (screenMatch) {
-        screenMatch.status = newStatus;
-        screenMatch.match_degree = matchItem.match_degree;
-        screenMatch.confidence = matchItem.confidence;
-        screenMatch.reasoning = matchItem.reasoning;
-        screenMatch.evidence_source = matchItem.evidence_source;
-        screenMatch.evidence_support = matchItem.evidence_support;
-        screenMatch.evidence_location = matchItem.evidence_location;
-        if (evidence) screenMatch.evidence = evidence;
-      }
-      addAgentTrace(screenCandidate, 'HR 复核', '已更新 1 个要求，并局部刷新推荐判断');
+    // 非筛选流程候选人（没有一键计算队列可用）：保留原有的直接本地应用行为
+    matchItem.status = newStatus;
+    matchItem.reasoning = 'HR复核: ' + reason;
+    if (evidence) {
+      matchItem.evidence_source = 'hr_verified_evidence';
+      matchItem.evidence = evidence;
+      matchItem.evidence_support = '确凿';
+      matchItem.evidence_location = 'HR确认补充';
     }
   }
 
   // 记录审计
   addReviewLog(candidate, '逐项修改', reqId + ': ' + beforeStatus + ' → ' + newStatus + ' | 原因: ' + reason + (evidence ? ' | 补充证据: ' + evidence : ''));
 
-  // 局部重算
-  refreshCandidateBadges(candidate);
-  var score = computeScore(candidate.matchItems);
-  var rec = computeRecommendation(candidate.matchItems);
-
   resultEl.style.display = 'block';
   resultEl.innerHTML =
-    '<div style="padding:10px 14px;border-radius:12px;background:rgba(22,163,74,.08);border:1px solid rgba(22,163,74,.2)">' +
-    '<span style="color:var(--good);font-weight:700">修改完成</span><br>' +
-    '<span style="font-size:12px;color:var(--muted)">已局部重算：匹配分 ' + score + '，推荐「' + rec.text + '」</span><br>' +
+    '<div style="padding:10px 14px;border-radius:12px;background:rgba(202,138,4,.08);border:1px solid rgba(202,138,4,.2)">' +
+    '<span style="color:#92400e;font-weight:700">已记录修改</span><br>' +
+    '<span style="font-size:12px;color:var(--muted)">尚未生效——请在候选人卡片上点击「一键计算」，批量提交本轮所有修改并重新生成最终结果</span><br>' +
     '<span style="font-size:10px;color:var(--muted)">操作人: ' + escHtml(operator) + ' | ' + new Date().toLocaleString() + '</span>' +
     '</div>';
 
@@ -5185,13 +5512,15 @@ async function submitHROverride() {
   // 刷新列表
   renderResults();
   renderResultsReviewPreview();
-  addRecentActivity('<b>' + candidate.name + '</b> 的「' + ((JOB_REQUIREMENTS.find(function(r){return r.id===reqId;}) || {}).name || reqId) + '」被HR复核修改为 ' + ({satisfied:'满足',not_satisfied:'不满足',cannot_judge:'无法判断'})[newStatus]);
+  addRecentActivity('<b>' + candidate.name + '</b> 的「' + ((JOB_REQUIREMENTS.find(function(r){return r.id===reqId;}) || {}).name || reqId) + '」被HR记录改判为 ' + ({satisfied:'满足',not_satisfied:'不满足',cannot_judge:'无法判断'})[newStatus] + '（待一键计算生效）');
 
   // 2秒后关闭
-  setTimeout(function() { closeHROverride(); }, 2500);
+  setTimeout(function() { closeHROverride(); }, 2000);
 }
 
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+// 去掉面试建议里残留的需求编号标签（如「【req-009】」「[req-002]」），这些是内部 id，不应出现在前端。
+function stripReqTag(s) { return String(s == null ? '' : s).replace(/[【\[（(]\s*req[-_ ]?\d+\s*[】\]）)]\s*[:：、,\-]?\s*/ig, '').trim(); }
 function attr(s) { return escHtml(s); }
 function uiIcon(name) {
   var icons = {
@@ -5244,7 +5573,7 @@ function addReviewLog(candidate, action, detail) {
 
 function refreshCandidateBadges(candidate) {
   const score = computeScore(candidate.matchItems);
-  const rec = computeRecommendation(candidate.matchItems);
+  const rec = recFromScoring(candidate) || computeRecommendation(candidate.matchItems);
   candidate._score = score;
   candidate._rec = rec;
   const scoreEl = document.getElementById(`score-${candidate.id}`);
@@ -5294,7 +5623,7 @@ function applyQuestionDecision(candidateId, action) {
     addRecentActivity(`<b>${candidate.name}</b> 的复核反馈已生效，Agent 局部重算匹配结果`);
     refreshCandidateBadges(candidate);
     var score = computeScore(candidate.matchItems);
-    var rec = computeRecommendation(candidate.matchItems);
+    var rec = recFromScoring(candidate) || computeRecommendation(candidate.matchItems);
     return '系统已局部重算：匹配分更新为 ' + score + '，当前建议为「' + rec.text + '」。<br><span style="font-size:11px;color:var(--muted)">证据来源已标记为「HR确认补充」</span>';
   }
   if(action === 'deny') {
@@ -5303,7 +5632,7 @@ function applyQuestionDecision(candidateId, action) {
     addRecentActivity('<b>' + candidate.name + '</b> 的复核项被驳回，Agent 更新建议');
     refreshCandidateBadges(candidate);
     var score2 = computeScore(candidate.matchItems);
-    var rec2 = computeRecommendation(candidate.matchItems);
+    var rec2 = recFromScoring(candidate) || computeRecommendation(candidate.matchItems);
     return '系统已局部重算：匹配分更新为 ' + score2 + '，风险点已更新，当前建议为「' + rec2.text + '」。';
   }
   candidate.needsReview = true;
@@ -5413,22 +5742,13 @@ function parseResumes() {
 document.getElementById('fileInput').addEventListener('change', handleFileSelect);
 
 // ===== Init =====
-initSpace();
-updateSpaceBadge();
 renderReqList();
 loadLLMSettings();
 loadJobs();
 checkActiveSession();
 renderResumeList();
 renderRecentActivities();
-
-function updateSpaceBadge() {
-  var badge = document.getElementById('spaceBadge');
-  if (badge) {
-    badge.style.display = 'inline-flex';
-    badge.textContent = '工作区: ' + SPACE;
-  }
-}
+renderChatMessages();
 </script>
 </body>
 </html>

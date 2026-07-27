@@ -49,6 +49,23 @@ log = get_logger()
 app = FastAPI(title="F1 Skill Dev Server")
 settings = get_settings()
 
+# ── 多租户工作区隔离 ──────────────────────────────────────────
+# 每个请求带 X-Space 头（前端注入）或 ?space= 查询参数，写进 ContextVar；
+# jobs.json / 上传文件 / 简历缓存库都按 space 分目录，用户之间数据互不可见。
+from urllib.parse import unquote as _unquote
+from backend.utils.space import set_space, data_dir, upload_dir as _space_upload_dir
+
+
+@app.middleware("http")
+async def _space_middleware(request: Request, call_next):
+    raw = request.headers.get("X-Space")
+    if raw is not None:
+        raw = _unquote(raw)               # 前端 encodeURIComponent 过，解回原文
+    else:
+        raw = request.query_params.get("space")  # EventSource 等无法带头时的兜底
+    set_space(raw or "default")
+    return await call_next(request)
+
 # ── Agent router ─────────────────────────────────────────────
 from backend.agent.router import router as agent_router
 from backend.agent.session import get_session, get_queue, emit, AgentSession, CandidateSlot
@@ -61,34 +78,6 @@ app.include_router(screening_router)
 # ── Chat (conversational agent) router ────────────────────────
 from backend.chat.router import router as chat_router
 app.include_router(chat_router)
-
-
-# ── Multi-tenant space isolation ────────────────────────────
-from backend.utils.space import get_space, set_space, space_dir, upload_dir as _upload_dir
-
-
-@app.middleware("http")
-async def space_middleware(request: Request, call_next):
-    """Extract X-Space header or ?space= query param into ContextVar."""
-    space = (
-        request.headers.get("X-Space") or
-        request.query_params.get("space") or
-        "default"
-    )
-    set_space(space)
-    response = await call_next(request)
-    return response
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Seed ChromaDB synonym data on first startup."""
-    try:
-        from backend.rag.seed_data import seed
-        count = seed(clear_first=False)
-        log.info(f"ChromaDB 就绪: {count} 条同义词记录")
-    except Exception as e:
-        log.warning(f"ChromaDB 种子化失败（不影响核心功能）: {e}")
 
 
 # ── 通用 LLM 调用 ─────────────────────────────────────────
@@ -300,7 +289,8 @@ async def extract_resume(
     if suffix not in (".pdf", ".docx", ".doc"):
         return APIResponse(success=False, message=f"不支持的文件格式: {suffix}，支持 PDF/DOCX").model_dump()
 
-    upload_dir = _upload_dir()
+    upload_dir = _space_upload_dir(settings.app.upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
     tmp_path = upload_dir / f"tmp_{file.filename}"
     try:
         with open(tmp_path, "wb") as f:
@@ -700,13 +690,15 @@ async def feedback(request: Request):
     return APIResponse(success=result["added"], message=result["message"], data=result).model_dump()
 
 
-# ── 岗位 CRUD (JSON 文件持久化，按空间隔离) ──────────────────
-
-def _jobs_file() -> Path:
-    return space_dir() / "jobs.json"
+# ── 岗位 CRUD (JSON 文件持久化) ───────────────────────
 
 _job_resume_counts: dict[str, int] = {}
 _job_screened_counts: dict[str, int] = {}
+
+
+def _jobs_file() -> Path:
+    """当前 space 专属的 jobs.json（多租户隔离）。"""
+    return data_dir() / "jobs.json"
 
 
 def _load_jobs() -> list[dict]:
@@ -809,6 +801,45 @@ async def resume_delete(md5: str):
 
 # ── HR 人工复核: 修改单项结论 + 审计记录 ─────────────
 
+def _apply_hr_override(
+    target_item: dict,
+    operator: str,
+    new_status: str,
+    reason: str,
+    supplementary_evidence: str,
+) -> dict:
+    """把一条 HR 改判应用到 validated_items 里对应的 item 上（原地修改），返回审计记录。"""
+    from datetime import datetime, timezone
+
+    before_status = target_item.get("status", "cannot_judge")
+
+    override_record = {
+        "requirement_id": target_item.get("requirement_id", ""),
+        "operator": operator,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "before_status": before_status,
+        "after_status": new_status,
+        "reason": reason,
+        "supplementary_evidence": supplementary_evidence,
+    }
+    target_item["hr_override"] = override_record
+    target_item["status"] = new_status
+    target_item["needs_human_review"] = False
+
+    # 如果 HR 提供了补充证据，追加为 hr_verified_evidence
+    if supplementary_evidence:
+        sources = target_item.get("evidence_sources", [])
+        sources.append({
+            "content": supplementary_evidence,
+            "source_type": "hr_verified_evidence",
+            "source_location": f"HR确认({operator})",
+            "verified": True,
+        })
+        target_item["evidence_sources"] = sources
+
+    return override_record
+
+
 @app.post("/api/hr-override")
 async def hr_override(request: Request):
     """HR 确认/驳回某项要求的判断结果，记录审计信息，触发局部重算"""
@@ -833,8 +864,6 @@ async def hr_override(request: Request):
     if not reason:
         return APIResponse(success=False, message="reason（修改原因）不能为空").model_dump()
 
-    from datetime import datetime, timezone
-
     target_item = None
     for item in validated_items:
         if item.get("requirement_id") == requirement_id:
@@ -844,33 +873,8 @@ async def hr_override(request: Request):
     if not target_item:
         return APIResponse(success=False, message=f"未找到 requirement_id={requirement_id}").model_dump()
 
-    # 记录修改前状态
     before_status = target_item.get("status", "cannot_judge")
-
-    # 写入 HR Override 审计记录
-    override_record = {
-        "requirement_id": requirement_id,
-        "operator": operator,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "before_status": before_status,
-        "after_status": new_status,
-        "reason": reason,
-        "supplementary_evidence": supplementary_evidence,
-    }
-    target_item["hr_override"] = override_record
-    target_item["status"] = new_status
-    target_item["needs_human_review"] = False
-
-    # 如果 HR 提供了补充证据，追加为 hr_verified_evidence
-    if supplementary_evidence:
-        sources = target_item.get("evidence_sources", [])
-        sources.append({
-            "content": supplementary_evidence,
-            "source_type": "hr_verified_evidence",
-            "source_location": f"HR确认({operator})",
-            "verified": True,
-        })
-        target_item["evidence_sources"] = sources
+    override_record = _apply_hr_override(target_item, operator, new_status, reason, supplementary_evidence)
 
     # 局部重算: 调用 controller.rerun_affected()
     api_key = body.get("api_key") or settings.deepseek.api_key
@@ -895,6 +899,70 @@ async def hr_override(request: Request):
         data={
             "override_record": override_record,
             "updated_item": target_item,
+            "validated_items": validated_items,
+            **rerun_result,
+        },
+    ).model_dump()
+
+
+@app.post("/api/hr-override-batch")
+async def hr_override_batch(request: Request):
+    """HR 一次性提交多条改判，只触发一次局部重算（Skill4风险分析 + Skill5推荐生成）"""
+    body = await request.json()
+    operator = body.get("operator", "").strip()
+    overrides = body.get("overrides", [])
+
+    validated_items = body.get("validated_items", [])
+    requirements = body.get("requirements", [])
+    matches = body.get("matches", [])
+
+    if not operator:
+        return APIResponse(success=False, message="operator（操作人）不能为空").model_dump()
+    if not isinstance(overrides, list) or not overrides:
+        return APIResponse(success=False, message="overrides 不能为空").model_dump()
+
+    override_records = []
+    for ov in overrides:
+        requirement_id = (ov.get("requirement_id") or "").strip()
+        new_status = (ov.get("new_status") or "").strip()
+        reason = (ov.get("reason") or "").strip()
+        supplementary_evidence = (ov.get("supplementary_evidence") or "").strip()
+
+        if not requirement_id:
+            return APIResponse(success=False, message="overrides 中存在空的 requirement_id").model_dump()
+        if new_status not in ("satisfied", "not_satisfied", "cannot_judge"):
+            return APIResponse(success=False, message=f"{requirement_id}: new_status 必须是 satisfied/not_satisfied/cannot_judge").model_dump()
+        if not reason:
+            return APIResponse(success=False, message=f"{requirement_id}: reason（修改原因）不能为空").model_dump()
+
+        target_item = next((item for item in validated_items if item.get("requirement_id") == requirement_id), None)
+        if not target_item:
+            return APIResponse(success=False, message=f"未找到 requirement_id={requirement_id}").model_dump()
+
+        override_records.append(_apply_hr_override(target_item, operator, new_status, reason, supplementary_evidence))
+
+    # 局部重算: 无论这一批改了几条，只调用一次 rerun_affected()
+    api_key = body.get("api_key") or settings.deepseek.api_key
+    base_url = body.get("base_url") or settings.deepseek.base_url
+    model = body.get("model") or settings.deepseek.model
+
+    rerun_result = {}
+    if requirements and matches and validated_items:
+        try:
+            from backend.workflows.controller import rerun_affected
+            rerun_result = await rerun_affected(requirements, matches, validated_items, api_key, base_url, model)
+            log.info(f"HR 批量 Override 局部重算完成: {len(override_records)} 条")
+        except Exception as e:
+            log.error(f"HR 批量 Override 局部重算失败: {e}")
+            rerun_result = {"rerun_error": str(e)}
+    else:
+        log.info(f"HR 批量 Override 仅记录审计（无完整上下文，跳过重算）: {len(override_records)} 条")
+
+    return APIResponse(
+        success=True,
+        message=f"已批量更新 {len(override_records)} 项",
+        data={
+            "override_records": override_records,
             "validated_items": validated_items,
             **rerun_result,
         },
@@ -1029,7 +1097,8 @@ async def screen(
     from backend.skills.risk_analyzer.node import analyze as analyze_risk
     from backend.skills.recommendation_gen.node import generate as generate_recommendation
 
-    upload_dir = _upload_dir()
+    upload_dir = _space_upload_dir(settings.app.upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
 
     # JD 解析（只跑一次）
     jd_text = clean_text(jd_text, "jd")
@@ -1201,7 +1270,8 @@ async def screen_stream(
     if not api_key:
         return _err("请填写 API Key")
 
-    upload_dir = _upload_dir()
+    upload_dir = _space_upload_dir(settings.app.upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
 
     # 先保存所有文件（UploadFile 在 StreamingResponse 里可能已关闭）
     total = len(files)
@@ -1502,7 +1572,8 @@ async def screen_agent(
     from backend.skills.recommendation_gen.node import generate as generate_recommendation
     from backend.workflows.controller import check_stop_condition, find_unresolved, ControllerState
 
-    upload_dir = _upload_dir()
+    upload_dir = _space_upload_dir(settings.app.upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
 
     async def event_stream():
         total = len(files)
@@ -1716,7 +1787,7 @@ async def screen_session(
                 "raw_text": pp.get("raw_text", ""),
             })
     else:
-        upload_dir = Path(settings.app.upload_dir)
+        upload_dir = _space_upload_dir(settings.app.upload_dir)
         upload_dir.mkdir(parents=True, exist_ok=True)
         for idx, file in enumerate(files):
             filename = file.filename or f"resume_{idx}"
@@ -1805,7 +1876,7 @@ async def screen_session(
                         "sub_step": "文档解析", "message": f"[{idx+1}/{total}] {filename} — 文档解析..."})
                     slot.status = "document_parsing"
 
-                    text, _ = document_parser.parse(str(tmp_path))
+                    text, _ = await asyncio.to_thread(document_parser.parse, str(tmp_path))
                     text = clean_text(text)
                     slot.raw_text = text
 
@@ -1822,7 +1893,7 @@ async def screen_session(
                         slot.status = "resume_extraction"
                         resume_result = await extract_resume(text, api_key, base_url, model)
                         try:
-                            cache_save(str(tmp_path), text, resume_result)
+                            cache_save(str(tmp_path), text, resume_result, job_id)
                         except Exception as e:
                             log.warning(f"[Session {sid}] 缓存保存失败 ({filename}): {e}")
 
@@ -1830,6 +1901,13 @@ async def screen_session(
 
                 name = (resume_result.get("basic_info") or {}).get("name") or filename
                 slot.name = name
+
+                # 解析（文档解析 + Skill 2 简历提取）到此真正完成——把解析好的简历数据发给前端，
+                # 让"简历已经解析"通知与"查看解析结果"落到实处（此前解析数据要等 candidate_done 才回传）。
+                emit(sid, "resume_parsed", {
+                    "index": idx, "name": name, "file_name": filename,
+                    "resume": resume_result, "raw_text": slot.raw_text,
+                })
 
                 # Matching
                 emit(sid, "progress", {"step": "resume_step", "index": idx, "total": total,
@@ -2040,14 +2118,19 @@ async def session_cancel(sid: str):
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return FileResponse(Path(__file__).parent.parent / "skill-tester" / "index.html")
+    # 前端是单文件，改动频繁；禁用缓存，避免浏览器一直显示旧版本。
+    return FileResponse(
+        Path(__file__).parent.parent / "skill-tester" / "index.html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+    )
 
 
 if __name__ == "__main__":
     import uvicorn
-    # Railway / cloud platforms inject PORT env var; use it if present
+    # 云平台（Railway 等）会注入 PORT；本地开发回落到配置里的 dev_port。
+    # HOST 默认沿用配置（本地 127.0.0.1）；容器里由 Dockerfile 设 HOST=0.0.0.0 对外可访问。
     port = int(_os.environ.get("PORT", settings.app.dev_port))
-    host = _os.environ.get("HOST", "0.0.0.0")
+    host = _os.environ.get("HOST", settings.app.host)
     print(f"\n  F1 Skill 服务器启动: http://{host}:{port}")
     print(f"  API Key: {'已配置' if settings.deepseek.api_key else '未配置（需在前端填写）'}")
     uvicorn.run(app, host=host, port=port, workers=1, timeout_keep_alive=600)

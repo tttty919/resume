@@ -1,0 +1,49 @@
+flowchart TB
+    subgraph FRONT["前端交互层"]
+        direction LR
+        F1[首页/智能助理]
+        F2[职位/简历管理]
+        F3[筛选进度/SSE]
+        F4[结果页/对比/改判]
+    end
+
+    subgraph CORE["Agent核心引擎"]
+        direction TB
+        subgraph PIPE["5-Skill筛选管线"]
+            direction LR
+            S1[JD解析] --> S3[语义匹配+证据]
+            S2[简历提取] --> S3
+            S3 --> CHECK{Agent检查}
+            CHECK -->|通过| S4[风险分析]
+            CHECK -->|需HR| PAUSE[暂停等待]
+            S4 --> S5[推荐生成]
+        end
+        CTRL[流程控制器]
+        SESS[会话管理]
+        CHAT[智能助理/8个工具]
+    end
+
+    subgraph TOOLS["工具层"]
+        direction LR
+        T1[文档解析]
+        T2[RAG同义词]
+        T3[文本清洗]
+        T4[缓存去重]
+        T5[规则评分]
+    end
+
+    LLM[大语言模型]
+
+    FRONT --> CORE
+    S2 --> T1
+    S3 --> T2
+    S2 --> T3
+    S2 --> T4
+    S5 --> T5
+    S1 & S2 & S3 & S4 & CHAT --> LLM
+
+    style S3 fill:#e8f5e9,stroke:#4caf50
+    style CHECK fill:#fce4ec,stroke:#e91e63
+    style CHAT fill:#e3f2fd,stroke:#2196f3
+    style LLM fill:#f3e5f5,stroke:#9c27b0
+    style PIPE fill:#fafafa,stroke:#e0e0e0

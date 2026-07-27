@@ -23,6 +23,7 @@ from backend.agent.session import (
 from backend.core.config import get_settings
 from backend.core.logger import get_logger
 from backend.tools.document_parser import document_parser
+from backend.utils.space import upload_dir as _space_upload_dir
 from backend.tools.text_cleaner import clean_text
 from backend.storage.resume_store import get_cached as cache_get, save as cache_save
 from backend.utils.llm_utils import create_llm, load_prompt, ChatPromptTemplate
@@ -91,8 +92,7 @@ async def _process_candidates(sid: str, api_key: str, base_url: str, model: str)
             else:
                 emit(sid, "progress", {"step": "resume_step", "index": slot.index, "total": len(session.candidates),
                     "sub_step": "文档解析", "message": f"正在处理: {slot.file_name} — 文档解析..."})
-                from backend.utils.space import upload_dir as _space_upload
-                upload_dir = _space_upload()
+                upload_dir = _space_upload_dir(settings.app.upload_dir)
                 files_found = list(upload_dir.glob(f"agent_{slot.index}_*"))
                 if files_found:
                     tmp_path = files_found[0]
@@ -302,8 +302,8 @@ async def agent_start(
             pass
 
     # ---- Save files ----
-    from backend.utils.space import upload_dir as _space_upload
-    upload_dir = _space_upload()
+    upload_dir = _space_upload_dir(settings.app.upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
     candidate_names = []
     for idx, file in enumerate(files):
         fname = file.filename or f"resume_{idx}"

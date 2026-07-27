@@ -14,6 +14,9 @@ class SingleMatch(BaseModel):
     evidence: str = Field(default="", description="简历原文摘录（>=15字符）")
     evidence_location: str = Field(default="", description="证据在原文中的位置描述")
     evidence_support: Literal["确凿", "部分", "未找到", "信息不足"] = "未找到"
+    evidence_sources: list[dict] = Field(default_factory=list, description="证据来源溯源，含 source_type: resume_evidence/system_inference/hr_verified_evidence")
+    needs_human_review: bool = False
+    status_changed: bool = False
 
 
 class SemanticMatcherOutput(BaseModel):
