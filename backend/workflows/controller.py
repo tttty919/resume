@@ -221,8 +221,8 @@ def now_iso() -> str:
 import json as _json
 import inspect as _inspect
 
-MAX_ITERATIONS = 12
-MAX_ATTEMPTS_PER_REQ = 2
+MAX_ITERATIONS = 3
+MAX_ATTEMPTS_PER_REQ = 1
 MIN_CONFIDENCE = 0.6
 
 # 消耗"再努力"配额的动作（受单条上限限制，防止死缠一条）。

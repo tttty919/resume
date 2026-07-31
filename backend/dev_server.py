@@ -40,6 +40,7 @@ from backend.storage.resume_store import (
     get_cached as cache_get, save as cache_save,
     check as cache_check, get as cache_get_by_md5,
     list_by_job as cache_list_by_job, delete as cache_delete,
+    update_parsed as cache_update_parsed,
 )
 from backend.utils.llm_utils import create_llm, load_prompt, parse_llm_json
 
@@ -380,10 +381,14 @@ async def parse_document_quick(
         cached = cache_get(str(tmp_path))
         if cached and cached.get("raw_text"):
             log.info(f"[QuickParse Cache HIT] {file.filename}")
+            import hashlib
+            md5 = hashlib.md5(open(str(tmp_path), "rb").read()).hexdigest()
+            # Check if we have full cache (text + structured data)
+            parsed = cached.get("parsed_resume") if isinstance(cached.get("parsed_resume"), dict) and cached["parsed_resume"].get("basic_info") else None
             return APIResponse(
                 success=True,
-                message=f"缓存命中: {len(cached['raw_text'])} 字",
-                data={"file_name": file.filename, "raw_text": cached["raw_text"], "text_length": len(cached["raw_text"]), "cached": True},
+                message=f"缓存命中: {len(cached['raw_text'])} 字" + (" (含结构化数据)" if parsed else ""),
+                data={"file_name": file.filename, "raw_text": cached["raw_text"], "text_length": len(cached["raw_text"]), "cached": True, "md5": md5, "parsed": parsed},
             ).model_dump()
 
         text, images = document_parser.parse(str(tmp_path))
@@ -394,10 +399,18 @@ async def parse_document_quick(
 
         log.info(f"QuickParse: {file.filename} → {len(text)} chars, {len(images)} images")
 
+        # Save raw_text to cache immediately so re-uploads hit cache
+        import hashlib
+        md5 = hashlib.md5(open(str(tmp_path), "rb").read()).hexdigest()
+        try:
+            cache_save(str(tmp_path), text, {}, job_id)
+        except Exception as e:
+            log.warning(f"[QuickParse] 缓存保存失败 ({file.filename}): {e}")
+
         return APIResponse(
             success=True,
             message=f"解析完成: {len(text)} 字",
-            data={"file_name": file.filename, "raw_text": text, "text_length": len(text), "images_count": len(images)},
+            data={"file_name": file.filename, "raw_text": text, "text_length": len(text), "images_count": len(images), "md5": md5},
         ).model_dump()
     except Exception as e:
         log.error(f"QuickParse 失败: {e}")
@@ -411,12 +424,14 @@ async def parse_document_quick(
 
 @app.post("/api/extract-resume-text")
 async def extract_resume_text(request: Request):
-    """Skill 2 (调试): 粘贴简历文本 → 跳过文档解析，直接 LLM 提取"""
+    """Skill 2: 粘贴简历文本 → 跳过文档解析，直接 LLM 提取。
+    可选传入 md5 参数以更新缓存中的 parsed_json。"""
     body = await request.json()
     raw_resume = body.get("resume", "").strip()
     api_key = body.get("api_key") or settings.deepseek.api_key
     base_url = body.get("base_url") or settings.deepseek.base_url
     model = body.get("model") or settings.deepseek.model
+    file_md5 = (body.get("md5") or "").strip()
 
     if not raw_resume:
         return APIResponse(success=False, message="简历文本不能为空").model_dump()
@@ -428,6 +443,15 @@ async def extract_resume_text(request: Request):
         result = await _call_llm_async("skills/resume_extractor/prompt.txt", {"raw_resume": raw_resume}, api_key, base_url, model)
         name = result.get("basic_info", {}).get("name", "未知")
         log.info(f"ResumeExtractor(文本) 成功: {name}")
+
+        # Update cache with parsed data if md5 provided
+        if file_md5 and len(file_md5) == 32:
+            try:
+                cache_update_parsed(file_md5, result)
+                log.info(f"[Cache] 更新结构化数据: {file_md5} → {name}")
+            except Exception as e:
+                log.warning(f"[Cache] 更新失败 ({file_md5}): {e}")
+
         return APIResponse(success=True, data=result).model_dump()
     except Exception as e:
         log.error(f"ResumeExtractor(文本) 失败: {e}")

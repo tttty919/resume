@@ -2,6 +2,8 @@
 
 调用链: requirements + validated_items + risk_analysis → 评分引擎 → LLM 润色
 核心原则: 评分引擎（纯规则）算分定级 → LLM 只做文本润色，不修改推荐等级。
+
+analyze_and_recommend(): 合并风险分析+推荐生成为一个 LLM 调用，省一次 API 往返。
 """
 
 import json
@@ -64,6 +66,58 @@ async def generate(
     result["summary"]["recommendation"] = scoring["tier_label"]
     result["scoring"] = scoring
     return result
+
+
+async def analyze_and_recommend(
+    requirements: list[dict],
+    matches: list[dict],
+    validated_items: list[dict] | None = None,
+    api_key: str = "",
+    base_url: str = "",
+    model: str = "",
+) -> dict:
+    """合并风险分析 + 推荐生成为一个 LLM 调用，省一次 API 往返。
+
+    流程: 规则算分（无 LLM）→ 单次 LLM 调用同时输出 analysis + summary + recommendation_reason。
+
+    Returns:
+        {"analysis": {...}, "scoring": {...}, "summary": {...}, "recommendation_reason": "..."}
+    """
+    if validated_items is None:
+        validated_items = matches
+
+    # Step 1: 评分引擎 — 纯规则（<1ms）
+    scoring = score_matches(matches, validated_items, requirements)
+
+    # Step 2: 单次 LLM 调用 — 风险分析 + 推荐总结
+    llm = create_llm(api_key=api_key, base_url=base_url, model=model)
+    prompt_text = load_prompt("skills/recommendation_gen/merged_prompt.txt")
+    prompt = ChatPromptTemplate.from_template(prompt_text)
+    chain = prompt | llm
+
+    response = await chain.ainvoke({
+        "requirements_json": json.dumps(requirements, ensure_ascii=False, indent=2),
+        "validated_items_json": json.dumps(validated_items, ensure_ascii=False, indent=2),
+        "scoring_json": json.dumps(scoring, ensure_ascii=False, indent=2),
+    })
+
+    try:
+        parsed = parse_llm_json(response.content)
+    except ParseException:
+        # 降级：用规则评分兜底
+        return {
+            "analysis": {},
+            "scoring": scoring,
+            "summary": {"recommendation": scoring["tier_label"]},
+            "recommendation_reason": "",
+        }
+
+    # 强制覆写推荐等级（规则引擎定级，LLM 不可修改）
+    if not isinstance(parsed.get("summary"), dict):
+        parsed["summary"] = {}
+    parsed["summary"]["recommendation"] = scoring["tier_label"]
+    parsed["scoring"] = scoring
+    return parsed
 
 
 async def run(state: dict) -> dict:

@@ -144,6 +144,24 @@ def list_by_job(job_id: str) -> list[dict]:
         conn.close()
 
 
+def update_parsed(md5: str, parsed_resume: dict) -> bool:
+    """Update only the parsed_json for an existing cache entry. Returns True if updated."""
+    try:
+        parsed_json = json.dumps(parsed_resume, ensure_ascii=False, default=str)
+    except (TypeError, ValueError):
+        return False
+    conn = _get_conn()
+    try:
+        cur = conn.execute(
+            "UPDATE resume_cache SET parsed_json = ?, last_access = ? WHERE md5 = ?",
+            (parsed_json, time.time(), md5),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+    finally:
+        conn.close()
+
+
 def delete(md5: str) -> bool:
     """Delete a cached resume by MD5. Returns True if deleted, False if not found."""
     conn = _get_conn()

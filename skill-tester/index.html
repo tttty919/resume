@@ -1995,14 +1995,31 @@ async function parseSingleResume(file) {
     if(!quickResp.ok || !quickPayload.success) throw new Error(quickPayload.message || '文档解析失败');
 
     c.raw_text = (quickPayload.data && quickPayload.data.raw_text) || '';
+    c._fileMd5 = (quickPayload.data && quickPayload.data.md5) || '';
     c.status = 'llm_extracting';
     c.parseTime = ((performance.now() - startedAt) / 1000).toFixed(1) + 's (文本)';
     c.steps.push({step:'文本提取完成', message: (quickPayload.data && quickPayload.data.text_length || '?') + ' 字符'});
+
+    // If the cache already has structured data, skip Phase 2
+    var cachedParsed = quickPayload.data && quickPayload.data.parsed;
+    if (cachedParsed && cachedParsed.basic_info) {
+      c.resume = cachedParsed;
+      var basic = c.resume.basic_info || {};
+      c.name = basic.name || c.name;
+      c.status = 'done';
+      c.parseTime = ((performance.now() - startedAt) / 1000).toFixed(1) + 's (缓存)';
+      c.steps.push({step:'解析完成', message:'缓存命中，跳过 LLM 提取'});
+      screenState.completed = screenState.candidates.filter(function(x) { return x.status === 'done' || x.status === 'error'; }).length;
+      renderResumeList();
+      refreshResumeParseStatus();
+      return;
+    }
+
     renderResumeList();
     refreshResumeParseStatus();
 
     // ── Phase 2: LLM 结构化提取（异步，~30-60s）──
-    var llmBody = JSON.stringify({ resume: c.raw_text });
+    var llmBody = JSON.stringify({ resume: c.raw_text, md5: c._fileMd5 || '' });
     llmBody = appendLLMConfigToBody(llmBody);
     var llmResp = await fetch('/api/extract-resume-text', {
       method: 'POST',
@@ -2166,6 +2183,7 @@ function reparseResume(index) {
   c.parseTime = '解析中...';
   c.resume = null;
   c.raw_text = '';
+  c._fileMd5 = '';
   c._parseConfirmed = false;
   renderResumeList();
   refreshResumeParseStatus();
