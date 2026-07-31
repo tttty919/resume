@@ -27,13 +27,15 @@ def create_llm(
 ) -> ChatOpenAI:
     """统一创建 LLM 实例
 
-    enable_thinking: 开启 DeepSeek 思考模式（thinking.type=enabled）。
-    思考 token 会增加延迟但提升复杂判断的准确率，适合匹配/风险评估等关键步骤。
+    enable_thinking: 开启 DeepSeek 思考模式（thinking.type=enabled），
+    仅 deepseek-reasoner / deepseek-r1 等推理模型支持。v4-flash / v3 / chat 等标准
+    模型不支持，会被静默忽略。
     """
     model_kwargs: dict = {}
-    if enable_thinking:
+    _model = model or DEEPSEEK_MODEL
+    _supports_thinking = any(k in _model for k in ("reasoner", "r1"))
+    if enable_thinking and _supports_thinking:
         model_kwargs["thinking"] = {"type": "enabled"}
-        # 思考 tokens 不展示给用户但会计入输出，需扩大上限
         if max_tokens < 16384:
             max_tokens = 16384
 

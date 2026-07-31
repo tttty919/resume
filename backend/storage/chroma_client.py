@@ -6,8 +6,6 @@
 import os as _os
 if not _os.environ.get("HF_ENDPOINT"):
     _os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-if not _os.environ.get("HF_HUB_OFFLINE"):
-    _os.environ["HF_HUB_OFFLINE"] = "1"
 
 from pathlib import Path
 
@@ -24,6 +22,8 @@ EMBEDDING_MODEL = "BAAI/bge-small-zh-v1.5"
 # 相似度阈值：bge 模型余弦相似度通常在 0.3-0.9 范围
 SIMILARITY_THRESHOLD = 0.4
 
+_embedding_unavailable: bool = False
+
 
 class ChromaClient:
     """ChromaDB 持久化客户端封装"""
@@ -36,9 +36,13 @@ class ChromaClient:
         self._client: PersistentClient | None = None
         self._collection = None
         self._embed_fn: SentenceTransformerEmbeddingFunction | None = None
+        self._no_embed_collection = None
 
     @property
-    def embed_fn(self) -> SentenceTransformerEmbeddingFunction:
+    def embed_fn(self) -> SentenceTransformerEmbeddingFunction | None:
+        global _embedding_unavailable
+        if _embedding_unavailable:
+            return None
         if self._embed_fn is None:
             try:
                 self._embed_fn = SentenceTransformerEmbeddingFunction(
@@ -46,9 +50,9 @@ class ChromaClient:
                 )
                 self._log.info(f"Embedding 模型已加载: {EMBEDDING_MODEL}")
             except Exception as e:
-                self._log.warning(f"Embedding 模型加载失败（HuggingFace 不可用）: {e}")
+                self._log.warning(f"Embedding 模型加载失败（HuggingFace 不可用），禁用向量检索: {e}")
+                _embedding_unavailable = True
                 self._embed_fn = None
-                raise
         return self._embed_fn
 
     @property
@@ -65,11 +69,24 @@ class ChromaClient:
     @property
     def collection(self):
         if self._collection is None:
-            self._collection = self.client.get_or_create_collection(
-                name=self._collection_name,
-                embedding_function=self.embed_fn,
-                metadata={"description": "AI技能同义词知识库"},
-            )
+            ef = self.embed_fn
+            name = self._collection_name
+            if ef is None:
+                # 无 embedding 可用：使用不带 embedding 的 collection（仅支持 get/add/关键词检索）
+                name = f"{self._collection_name}_noembed"
+            try:
+                self._collection = self.client.get_or_create_collection(
+                    name=name,
+                    embedding_function=ef,
+                    metadata={"description": "AI技能同义词知识库"},
+                )
+            except Exception:
+                # 如果带 embedding 创建失败，降级为 no-embedding
+                self._collection = self.client.get_or_create_collection(
+                    name=f"{self._collection_name}_noembed",
+                    embedding_function=None,
+                    metadata={"description": "AI技能同义词知识库（降级模式）"},
+                )
         return self._collection
 
     def rebuild(self) -> None:
@@ -90,6 +107,8 @@ class ChromaClient:
 
     def query(self, query_text: str, n_results: int = 3) -> list[str]:
         """检索同义表述（仅返回相似度 >= 阈值的）"""
+        if self.embed_fn is None:
+            return []  # 无 embedding，跳过向量检索，由调用方回退关键词
         results = self.collection.query(query_texts=[query_text], n_results=n_results)
         distances = results.get("distances", [[]])[0]  # ChromaDB 返回 distance（越小越相似）
         documents = results.get("documents", [[]])[0]
