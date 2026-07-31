@@ -1,8 +1,11 @@
-FROM python:3.12-slim
+FROM python:3.12
 
 WORKDIR /app
 
-# PyMuPDF 1.24+ 自带 MuPDF，无需系统级 libmupdf
+# 系统依赖（chromadb 需要 libgomp1，pymupdf 1.24+ 自带 MuPDF）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Python 依赖
 COPY requirements.txt .
@@ -12,7 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/ ./backend/
 COPY skill-tester/ ./skill-tester/
 
-# 持久化数据目录（生产环境挂载为 volume）
+# 持久化数据目录
 RUN mkdir -p /app/data /app/uploads /app/chroma_data
 
 # HuggingFace 缓存（避免重启重复下载 embedding 模型）
