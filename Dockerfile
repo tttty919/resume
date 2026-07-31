@@ -2,10 +2,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# PyMuPDF 运行所需系统依赖
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libmupdf-dev \
-    && rm -rf /var/lib/apt/lists/*
+# PyMuPDF 1.24+ 自带 MuPDF，无需系统级 libmupdf
 
 # Python 依赖
 COPY requirements.txt .
