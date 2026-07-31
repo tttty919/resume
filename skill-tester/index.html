@@ -4938,7 +4938,10 @@ function renderResultsReviewPreview() {
     if(key) openIds[key] = true;
   });
   var candidates = getAllScreenCandidates();
-  if(candidates.length === 0) {
+  // Only show screening results when screening has actually been triggered.
+  // Parsed-but-not-screened candidates in screenState must not leak into the results page.
+  var hasScreening = Object.keys(screenTasks).length > 0 || (screenState && screenState.running);
+  if(candidates.length === 0 || !hasScreening) {
     el.innerHTML = '<div class="preview-empty">暂无评估任务。请先在简历管理页选择岗位、上传简历并点击一键匹配。</div>';
     return;
   }
