@@ -164,6 +164,61 @@ def _query_with_cache(req: dict) -> list[str]:
     return result
 
 
+# ── 证据校验关卡 ──────────────────────────────────────────
+
+
+def _verify_evidence_in_text(match: dict, raw_text: str) -> None:
+    """核对 AI 声称的证据是否真的存在于简历原文中。
+
+    规则：
+    - satisfied + evidence 为空 → 降级为 cannot_judge
+    - satisfied + evidence 在原文中完全找不到（模糊匹配也不行）→ 标记需人工复核
+    - not_satisfied / cannot_judge 不需要验证（证据本应为空）
+    """
+    status = match.get("status", "")
+    if status != "satisfied":
+        return
+
+    evidence = match.get("evidence", "")
+    if not evidence or evidence in ("未找到", "信息不足"):
+        match["status"] = "cannot_judge"
+        match["confidence"] = min(match.get("confidence", 0.5), 0.3)
+        match["evidence_support"] = "信息不足"
+        match["needs_human_review"] = True
+        logger.info(f"[证据校验] {match.get('requirement_name', '?')}: evidence为空 → 降级 cannot_judge")
+        return
+
+    # 模糊匹配：原文中能找到证据文本的核心部分（取前30字作为检索片段）
+    snippet = evidence[:60].strip()
+    if len(snippet) < 10:
+        return  # 证据太短，跳过验证
+
+    # 在原文中查找最长的公共子串
+    raw_lower = raw_text.lower()
+    snippet_lower = snippet.lower()
+
+    # 逐段切分 snippet，看原文是否包含至少一个 ≥10 字符的片段
+    found = False
+    for window in (30, 20, 15, 10):
+        for i in range(0, len(snippet) - window + 1, max(1, window // 3)):
+            seg = snippet_lower[i:i + window]
+            if seg in raw_lower:
+                found = True
+                break
+        if found:
+            break
+
+    if not found:
+        match["confidence"] = min(match.get("confidence", 0.5), 0.4)
+        match["needs_human_review"] = True
+        match["evidence_support"] = "部分"
+        logger.warning(
+            f"[证据校验] {match.get('requirement_name', '?')}: "
+            f"证据文本在简历原文中未找到 → 标记需人工复核 "
+            f"(evidence前60字: {snippet[:60]})"
+        )
+
+
 # ── 主函数 ────────────────────────────────────────────────
 
 async def match(
@@ -240,8 +295,9 @@ async def match(
     # Step 3: LLM 匹配 + 证据提取（分批并行，仅软性要求）
     llm_matches = []
     if soft_requirements:
-        BATCH_SIZE = 3
-        llm = create_llm(api_key=api_key, base_url=base_url, model=model)
+        # 动态批次：≤8条时一发搞定，避免同一份简历重复喂多次
+        BATCH_SIZE = len(soft_requirements) if len(soft_requirements) <= 8 else 5
+        llm = create_llm(api_key=api_key, base_url=base_url, model=model, enable_thinking=True)
         prompt_text = load_prompt("skills/semantic_matcher/prompt.txt")
         prompt = ChatPromptTemplate.from_template(prompt_text)
         chain = prompt | llm
@@ -250,7 +306,7 @@ async def match(
         raw_text = raw_resume_text or resume_json_str
 
         batches = [soft_requirements[i:i + BATCH_SIZE] for i in range(0, len(soft_requirements), BATCH_SIZE)]
-        logger.info(f"分批并行: {len(soft_requirements)} 条软性要求 → {len(batches)} 批 (每批 {BATCH_SIZE} 条)")
+        logger.info(f"分批并行: {len(soft_requirements)} 条软性要求 → {len(batches)} 批 (每批 {BATCH_SIZE} 条, thinking=on)")
 
         async def _run_batch(batch_reqs: list[dict]) -> list[dict]:
             batch_synonyms = {r.get("id", ""): synonyms_map.get(r.get("id", ""), []) for r in batch_reqs}
@@ -303,6 +359,11 @@ async def match(
             m["evidence_support"] = "信息不足"
             m["needs_human_review"] = True
             logger.info(f"[{m.get('requirement_name', '')}] satisfied 但 confidence={m.get('confidence')} < 0.6 → 强制改判 cannot_judge")
+
+    # Step 4.5: 证据校验关卡 —— 代码核对 AI 声称的证据是否真在简历原文中
+    if raw_resume_text:
+        for m in matches:
+            _verify_evidence_in_text(m, raw_resume_text)
 
     # 补全缺失的 requirement（LLM 可能漏掉某些条目）
     for req in requirements:

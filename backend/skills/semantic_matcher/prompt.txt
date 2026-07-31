@@ -98,8 +98,8 @@ satisfied + confidence < 0.6 → 矛盾，应改判 cannot_judge。
       "reasoning": "候选人在[公司]担任[职位]期间，[做了什么，引用项目名和技术栈]，与要求的'[要求名]'匹配。",
       "synonyms_used": [],
       "confidence": 0.90,
-      "evidence": "从 raw_resume_text 逐字摘录的原文完整句子（>=15字，一字不改）",
-      "evidence_location": "工作经历第X段 / 项目经历第Y段 / 技能列表",
+      "evidence": "从 raw_resume_text 逐字摘录的原文完整句子（>=15字，一字不改）。系统会核实这段文字是否真的在简历里——不要编造。",
+      "evidence_location": "该证据在简历中的准确位置，如：工作经历第2段/项目经历第1段第3句/技能列表第5行",
       "evidence_support": "确凿 | 部分 | 未找到 | 信息不足"
     }}
   ]

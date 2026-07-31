@@ -17,6 +17,18 @@ from backend.core.logger import get_logger
 SUPPORTED_FORMATS: frozenset[str] = frozenset({".pdf", ".docx", ".doc"})
 MIN_IMAGE_SIZE = 1024  # 最小图片字节数（过滤图标）
 
+# 常见简历章节标题 —— 用于插入结构标记，保留文档骨架
+_SECTION_PATTERNS = [
+    "基本信息", "个人概况", "个人信息", "求职意向", "自我评价", "个人评价",
+    "工作经历", "工作经验", "工作履历", "职业经历", "从业经验",
+    "项目经历", "项目经验", "主要项目", "代表项目", "重点项目",
+    "教育背景", "教育经历", "学习经历", "学历",
+    "技能", "专业技能", "技术栈", "技术能力", "掌握技能",
+    "证书", "资质证书", "语言能力", "获奖", "荣誉",
+    "实习经历", "社会实践", "校园经历", "社团", "志愿者",
+    "培训经历", "研究经历", "论文", "专利",
+]
+
 
 class DocumentParser:
     """简历文档解析器，支持 PDF / DOCX"""
@@ -112,7 +124,8 @@ class DocumentParser:
                 details={"error": str(e)},
             ) from e
 
-        return "\n\n".join(text_parts), images
+        raw = "\n\n".join(text_parts)
+        return self._add_section_markers(raw), images
 
     def _parse_docx(self, file_path: Path) -> tuple[str, list[bytes]]:
         text_parts: list[str] = []
@@ -149,6 +162,21 @@ class DocumentParser:
             ) from e
 
         return "\n\n".join(text_parts), images
+
+    def _add_section_markers(self, text: str) -> str:
+        """在识别到的简历章节标题前插入 [SECTION: 名称] 标记，保留文档骨架。"""
+        lines = text.split("\n")
+        result = []
+        for line in lines:
+            stripped = line.strip()
+            # 检查是否为已知章节标题（短行 + 匹配已知模式）
+            if len(stripped) <= 20:
+                for pattern in _SECTION_PATTERNS:
+                    if stripped == pattern or stripped.startswith(pattern):
+                        result.append(f"[SECTION: {pattern}]")
+                        break
+            result.append(line)
+        return "\n".join(result)
 
 
 # 全局单例

@@ -23,8 +23,20 @@ def create_llm(
     temperature: float = 0,
     max_tokens: int = 8192,
     request_timeout: float = 300,
+    enable_thinking: bool = False,
 ) -> ChatOpenAI:
-    """统一创建 LLM 实例"""
+    """统一创建 LLM 实例
+
+    enable_thinking: 开启 DeepSeek 思考模式（thinking.type=enabled）。
+    思考 token 会增加延迟但提升复杂判断的准确率，适合匹配/风险评估等关键步骤。
+    """
+    model_kwargs: dict = {}
+    if enable_thinking:
+        model_kwargs["thinking"] = {"type": "enabled"}
+        # 思考 tokens 不展示给用户但会计入输出，需扩大上限
+        if max_tokens < 16384:
+            max_tokens = 16384
+
     return ChatOpenAI(
         model=model or DEEPSEEK_MODEL,
         api_key=SecretStr(api_key) if api_key else SecretStr(DEEPSEEK_API_KEY),
@@ -32,6 +44,7 @@ def create_llm(
         temperature=temperature,
         max_tokens=max_tokens,
         request_timeout=request_timeout,
+        model_kwargs=model_kwargs,
     )
 
 
