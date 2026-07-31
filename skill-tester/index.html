@@ -1331,9 +1331,9 @@ function computeRecommendationFor(matchItems, requirements) {
 }
 
 /**
- * 优先采用后端评分引擎（scoring_engine）的权威结论，避免前端在“岗位要求列表尚未加载/
- * 无法与 reqId 对齐”时用 computeRecommendationFor 重算，得到与分数、满足项数不一致的结果
- * （典型 bug：100 分 / 12 项满足却显示“暂不推荐”）。后端无 scoring 时才回退到本地重算。
+ * 优先采用后端评分引擎（scoring_engine）的权威结论，避免前端在"岗位要求列表尚未加载/
+ * 无法与 reqId 对齐"时用 computeRecommendationFor 重算，得到与分数、满足项数不一致的结果
+ * （典型 bug：100 分 / 12 项满足却显示"暂不推荐"）。后端无 scoring 时才回退到本地重算。
  */
 function recFromScoring(c) {
   var s = (c && c.scoring) || {};
@@ -1389,6 +1389,24 @@ function appendLLMConfig(form) {
   if(cfg.api_key) form.append('api_key', cfg.api_key);
   if(cfg.base_url) form.append('base_url', cfg.base_url);
   if(cfg.model) form.append('model', cfg.model);
+}
+
+function appendLLMConfigToJson(body) {
+  var cfg = getLLMRequestConfig();
+  if(cfg.api_key) body.api_key = cfg.api_key;
+  if(cfg.base_url) body.base_url = cfg.base_url;
+  if(cfg.model) body.model = cfg.model;
+  return body;
+}
+
+function appendLLMConfigToBody(jsonStr) {
+  try {
+    var body = JSON.parse(jsonStr);
+    appendLLMConfigToJson(body);
+    return JSON.stringify(body);
+  } catch(e) {
+    return jsonStr;
+  }
 }
 
 function saveLLMSettings() {
@@ -1626,7 +1644,7 @@ function renderJobs(filterStatus) {
     listEl.innerHTML = `
       <div class="card" style="text-align:center;padding:42px 24px">
         <h4 style="font-size:18px;margin-bottom:8px">暂无岗位</h4>
-        <p style="color:var(--muted);font-size:13px;line-height:1.7">点击右上角“新建岗位”，粘贴真实 JD 后保存。</p>
+        <p style="color:var(--muted);font-size:13px;line-height:1.7">点击右上角"新建岗位"，粘贴真实 JD 后保存。</p>
         <button class="btn primary" style="margin-top:16px" onclick="openJobModal()">新建岗位</button>
       </div>`;
   } else {
@@ -1964,14 +1982,37 @@ async function parseSingleResume(file) {
   if(!c) return;
   var startedAt = performance.now();
   try {
-    var form = new FormData();
-    form.append('file', file, file.name);
-    appendLLMConfig(form);
-    var response = await fetch('/api/extract-resume', { method: 'POST', body: form });
-    var payload = await response.json();
-    if(!response.ok || !payload.success) throw new Error(payload.message || '解析失败');
-    c.resume = (payload.data && payload.data.extracted) || {};
-    c.raw_text = (payload.data && payload.data.raw_text) || '';
+    // ── Phase 1: 快速文档解析（仅 PDF→文本，~0.1s）──
+    c.status = 'extracting_text';
+    c.steps.push({step:'文档解析', message:'正在提取文本...'});
+    renderResumeList();
+    refreshResumeParseStatus();
+
+    var quickForm = new FormData();
+    quickForm.append('file', file, file.name);
+    var quickResp = await fetch('/api/parse-document-quick', { method: 'POST', body: quickForm });
+    var quickPayload = await quickResp.json();
+    if(!quickResp.ok || !quickPayload.success) throw new Error(quickPayload.message || '文档解析失败');
+
+    c.raw_text = (quickPayload.data && quickPayload.data.raw_text) || '';
+    c.status = 'llm_extracting';
+    c.parseTime = ((performance.now() - startedAt) / 1000).toFixed(1) + 's (文本)';
+    c.steps.push({step:'文本提取完成', message: (quickPayload.data && quickPayload.data.text_length || '?') + ' 字符'});
+    renderResumeList();
+    refreshResumeParseStatus();
+
+    // ── Phase 2: LLM 结构化提取（异步，~30-60s）──
+    var llmBody = JSON.stringify({ resume: c.raw_text });
+    llmBody = appendLLMConfigToBody(llmBody);
+    var llmResp = await fetch('/api/extract-resume-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: llmBody
+    });
+    var llmPayload = await llmResp.json();
+    if(!llmResp.ok || !llmPayload.success) throw new Error(llmPayload.message || 'LLM提取失败');
+
+    c.resume = (llmPayload.data) || {};
     var basic = (c.resume && c.resume.basic_info) || {};
     c.name = basic.name || c.name;
     c.status = 'done';
@@ -1989,12 +2030,12 @@ async function parseSingleResume(file) {
 
 function refreshResumeParseStatus() {
   var total = screenState.candidates.length;
-  var parsing = screenState.candidates.filter(function(c) { return c.status === 'parsing'; }).length;
+  var busy = screenState.candidates.filter(function(c) { return c.status === 'parsing' || c.status === 'extracting_text' || c.status === 'llm_extracting'; }).length;
   var done = screenState.candidates.filter(function(c) { return c.status === 'done'; }).length;
   var el = document.getElementById('parseStatus');
   if(!el) return;
   if(!total) el.textContent = '';
-  else if(parsing) el.textContent = '正在解析 ' + parsing + ' 份';
+  else if(busy) el.textContent = '正在解析 ' + busy + ' 份';
   else if(done) el.innerHTML = '<span style="color:var(--good);font-weight:700">解析完成</span>';
   else el.innerHTML = '<span style="color:var(--danger);font-weight:700">解析失败</span>';
 }
@@ -2068,16 +2109,21 @@ function renderResumeRow(c) {
   var major = basic.major || '';
   var role = basic.current_role || '';
   // 解析真正完成的标志：拿到了结构化简历数据（resume_parsed 事件回填），或整条流水线已 done。
-  // 匹配/风险/推荐阶段虽然 status 不是 'done'，但简历早已解析好，这里同样显示“解析完成”。
+  // 匹配/风险/推荐阶段虽然 status 不是 'done'，但简历早已解析好，这里同样显示"解析完成"。
   var isParsed = c.status === 'done' || !!(c.resume && c.resume.basic_info);
+  var hasText = !!c.raw_text;
   var needsConfirm = isParsed && !c._parseConfirmed;
   var statusHtml = c.status === 'error'
     ? '<span class="ri-tag error">' + uiIcon('alert') + '解析失败</span>'
-    : needsConfirm
+    : isParsed && needsConfirm
       ? '<span class="ri-tag pending">' + uiIcon('info') + '解析结果待确认</span>'
-      : isParsed
+      : isParsed && !needsConfirm
         ? '<span class="ri-tag parsed">' + uiIcon('check') + '已确认</span>'
-        : '<span class="ri-tag pending">' + uiIcon('loader') + '解析中</span>';
+        : c.status === 'llm_extracting'
+          ? '<span class="ri-tag pending">' + uiIcon('loader') + 'AI解析中...</span>'
+          : c.status === 'extracting_text'
+            ? '<span class="ri-tag pending">' + uiIcon('loader') + '提取文本中...</span>'
+            : '<span class="ri-tag pending">' + uiIcon('loader') + '解析中</span>';
   var meta = [statusHtml, c.parseTime || '', c.fileName || '', [degree, school, major].filter(Boolean).join(' · ')].filter(Boolean).join('');
   var skillHtml = skills.length ? '<div class="ri-skills">' + skills.map(function(s) { return '<span class="ri-skill">' + escHtml(s) + '</span>'; }).join('') + '</div>' : '';
   var errorHtml = c.errorMsg ? '<span style="color:var(--danger)">' + escHtml(c.errorMsg) + '</span>' : '';
@@ -2090,7 +2136,7 @@ function renderResumeRow(c) {
     '</div>' +
     '<div class="resume-actions">' +
       (needsConfirm ? '<button class="btn-icon confirm" title="确认解析结果无误" onclick="event.stopPropagation();confirmResumeParse(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></button>' : '') +
-      '<button class="btn-icon" title="编辑" onclick="event.stopPropagation();openResumeEditModal(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>' +
+      (isParsed ? '<button class="btn-icon" title="编辑" onclick="event.stopPropagation();openResumeEditModal(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>' : '') +
       '<button class="btn-icon" title="重新解析" onclick="event.stopPropagation();reparseResume(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>' +
       '<button class="btn-icon danger" title="删除" onclick="event.stopPropagation();deleteResume(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
     '</div>' +
@@ -2921,7 +2967,7 @@ function renderAgentPanel(candidate) {
     }).join('') + '</div>' : '') +
     (questions.length || candidate.agentStopReason ? '<div class="agent-questions">' +
       '<div class="agent-question">' + escHtml(stopText || '存在需要人工确认的匹配项，请在下方逐项复核。') + '</div>' +
-      '<div class="agent-question-note">补充说明请写在对应匹配项的“填写说明”里，系统只更新受影响要求和推荐结论。</div>' +
+      '<div class="agent-question-note">补充说明请写在对应匹配项的"填写说明"里，系统只更新受影响要求和推荐结论。</div>' +
     '</div>' : '') +
   '</div>';
 }
@@ -2937,7 +2983,7 @@ function refreshResultsPreviewIfActive() {
 // ===== Skills 3-5: 开始匹配筛选（后台处理 + 断线重连） =====
 async function startScreening() {
   CANDIDATES.length = 0;
-  if(screenState.candidates.some(function(x){return x.status === 'parsing';})) { alert('简历仍在解析中，请等待解析完成后再一键匹配'); return; }
+  if(screenState.candidates.some(function(x){return x.status === 'parsing' || x.status === 'extracting_text' || x.status === 'llm_extracting';})) { alert('简历仍在解析中，请等待解析完成后再一键匹配'); return; }
   const doneCandidates = screenState.candidates.filter(function(x){return x.status==='done' && x.resume && x.raw_text;})
     .map(function(c, i) {
       c.index = i;
@@ -3361,9 +3407,9 @@ function handleSSEEvent(event, data, taskId) {
       break;
 
     case 'resume_parsed':
-      // 后端在“解析真正完成、进入匹配之前”发来的事件，携带解析好的简历数据。
-      // 收到即把数据挂到候选人身上——此时列表可显示“解析完成”并有真实内容，
-      // “简历已经解析”通知与“查看解析结果”也才名副其实。
+      // 后端在"解析真正完成、进入匹配之前"发来的事件，携带解析好的简历数据。
+      // 收到即把数据挂到候选人身上——此时列表可显示"解析完成"并有真实内容，
+      // "简历已经解析"通知与"查看解析结果"也才名副其实。
       var rp = screenState.candidates.find(function(x) { return x.index === data.index; });
       if(rp) {
         rp.resume = data.resume || rp.resume;
@@ -4644,8 +4690,8 @@ function handleChatToolResult(name, result, filesForTurn) {
 
 // 简历「真正解析完成并写入简历管理界面」的唯一可靠标志：拿到了结构化简历数据
 // （resume_parsed / candidate_done 回填后 renderResumeList 已把它渲染进界面）。
-// 只认真实数据——status 推进到“语义匹配/风险分析”等下游阶段并不代表简历已落到界面上，
-// 用 sub_step 状态判定会在简历还没写进界面时就误报“解析完成”，所以这里不再看 status。
+// 只认真实数据——status 推进到"语义匹配/风险分析"等下游阶段并不代表简历已落到界面上，
+// 用 sub_step 状态判定会在简历还没写进界面时就误报"解析完成"，所以这里不再看 status。
 function chatCandidateParsed(c) {
   return !!(c.resume && c.resume.basic_info);
 }

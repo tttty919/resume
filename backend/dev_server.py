@@ -354,6 +354,59 @@ async def extract_resume(
             tmp_path.unlink()
 
 
+# ── 快速文档解析（仅 PDF→文本，无 LLM，~0.1s）─────────────
+
+@app.post("/api/parse-document-quick")
+async def parse_document_quick(
+    file: UploadFile = File(...),
+    job_id: str = Form(""),
+):
+    """仅文档解析：PDF/DOCX → 纯文本，不调用 LLM。约 0.1s 返回。"""
+    if not file.filename:
+        return APIResponse(success=False, message="未选择文件").model_dump()
+
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in (".pdf", ".docx", ".doc"):
+        return APIResponse(success=False, message=f"不支持的文件格式: {suffix}，支持 PDF/DOCX").model_dump()
+
+    upload_dir = _space_upload_dir(settings.app.upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    tmp_path = upload_dir / f"quick_{file.filename}"
+    try:
+        with open(tmp_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        # Check cache first
+        cached = cache_get(str(tmp_path))
+        if cached and cached.get("raw_text"):
+            log.info(f"[QuickParse Cache HIT] {file.filename}")
+            return APIResponse(
+                success=True,
+                message=f"缓存命中: {len(cached['raw_text'])} 字",
+                data={"file_name": file.filename, "raw_text": cached["raw_text"], "text_length": len(cached["raw_text"]), "cached": True},
+            ).model_dump()
+
+        text, images = document_parser.parse(str(tmp_path))
+        text = clean_text(text, "resume")
+
+        if not text.strip():
+            return APIResponse(success=False, message="文档解析结果为空，请检查文件内容").model_dump()
+
+        log.info(f"QuickParse: {file.filename} → {len(text)} chars, {len(images)} images")
+
+        return APIResponse(
+            success=True,
+            message=f"解析完成: {len(text)} 字",
+            data={"file_name": file.filename, "raw_text": text, "text_length": len(text), "images_count": len(images)},
+        ).model_dump()
+    except Exception as e:
+        log.error(f"QuickParse 失败: {e}")
+        return APIResponse(success=False, message=str(e)).model_dump()
+    finally:
+        if tmp_path.exists():
+            tmp_path.unlink()
+
+
 # ── Skill 2: ResumeExtractor (文本粘贴 — 调试用) ────────────
 
 @app.post("/api/extract-resume-text")

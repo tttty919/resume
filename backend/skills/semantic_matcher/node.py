@@ -236,7 +236,11 @@ def _resolve_single_location(loc: str, resume: dict) -> str | None:
     loc = loc.strip()
     # 去除注释性括号内容: （第3条：xxx）
     loc = re.sub(r'[（(][^)）]*[）)]', '', loc).strip()
-    # 去除尾部描述: "第2句", "第3条"
+
+    # 提取 "第N条/句/项" 索引提示（在清除之前）
+    nth_match = re.search(r'第\s*(\d+)\s*[句条款项]', loc)
+    nth_index = int(nth_match.group(1)) - 1 if nth_match else None
+    # 清除 "第N条/句/项 ..." 尾部描述
     loc = re.sub(r'\s*第\s*\d+\s*[句条款项].*$', '', loc).strip()
 
     # Pattern: "basic_info.xxx"
@@ -251,14 +255,14 @@ def _resolve_single_location(loc: str, resume: dict) -> str | None:
     if m:
         key = m.group(1).strip()
         sub_path = m.group(2).strip()
-        return _navigate_list_field(resume.get("work_experiences", []), key, sub_path)
+        return _navigate_list_field(resume.get("work_experiences", []), key, sub_path, nth_index)
 
     # Pattern: "projects[N].sub_path" or "projects[key].sub_path"
     m = re.match(r"projects?\[(.+?)\]\.(.+)", loc)
     if m:
         key = m.group(1).strip()
         sub_path = m.group(2).strip()
-        return _navigate_list_field(resume.get("projects", []), key, sub_path)
+        return _navigate_list_field(resume.get("projects", []), key, sub_path, nth_index)
 
     # Pattern: "skills ..."
     if "skills" in loc.lower() or "skill" in loc.lower():
@@ -276,11 +280,11 @@ def _resolve_single_location(loc: str, resume: dict) -> str | None:
     return None
 
 
-def _navigate_list_field(items: list, key: str, sub_path: str) -> str | None:
+def _navigate_list_field(items: list, key: str, sub_path: str, nth_index: int | None = None) -> str | None:
     """在列表字段中按 key（数字索引或名称子串）定位元素，再按 sub_path 取字段。
 
-    sub_path 支持: "description", "responsibilities[2]", "responsibilities[2].xxx"
-    """
+    sub_path 支持: "description", "responsibilities[2]", "responsibilities"
+    nth_index: 第N条/句提示，用于 sub_path 指向列表字段时自动索引。"""
     if not items:
         return None
 
@@ -316,9 +320,19 @@ def _navigate_list_field(items: list, key: str, sub_path: str) -> str | None:
             return str(val)[:300] if val else None
         return None
 
-    # 简单字段: "description", "role", "duration"
+    # 简单字段: "description", "role", "responsibilities"
     val = item.get(sub_path, "")
-    return str(val)[:300] if val else None
+    if val:
+        # 如果值是列表且提供了 nth_index，按索引取
+        if isinstance(val, list) and nth_index is not None and 0 <= nth_index < len(val):
+            elem = val[nth_index]
+            return (str(elem)[:300]) if elem else None
+        # 如果是字符串直接返回
+        if isinstance(val, str):
+            return val[:300]
+        return str(val)[:300] if val else None
+
+    return None
 
 
 def _fuzzy_contains(extracted: str, raw_text: str) -> bool:
