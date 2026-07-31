@@ -164,59 +164,177 @@ def _query_with_cache(req: dict) -> list[str]:
     return result
 
 
-# ── 证据校验关卡 ──────────────────────────────────────────
+# ── 证据提取关卡（代码根据 AI 的 evidence_location 从简历 JSON 提取原文） ─
 
 
-def _verify_evidence_in_text(match: dict, raw_text: str) -> None:
-    """核对 AI 声称的证据是否真的存在于简历原文中。
+def _extract_evidence_by_location(match: dict, resume: dict, raw_text: str) -> None:
+    """根据 AI 提供的 evidence_location 从结构化简历 JSON 中提取证据原文，
+    并在 raw_text 中模糊验证。提取成功则填入 evidence 字段。
 
-    规则：
-    - satisfied + evidence 为空 → 降级为 cannot_judge
-    - satisfied + evidence 在原文中完全找不到（模糊匹配也不行）→ 标记需人工复核
-    - not_satisfied / cannot_judge 不需要验证（证据本应为空）
+    AI 不再默写证据，只指位；代码负责从结构化 JSON 中取出对应文本。
     """
     status = match.get("status", "")
     if status != "satisfied":
         return
 
-    evidence = match.get("evidence", "")
-    if not evidence or evidence in ("未找到", "信息不足"):
-        match["status"] = "cannot_judge"
-        match["confidence"] = min(match.get("confidence", 0.5), 0.3)
-        match["evidence_support"] = "信息不足"
-        match["needs_human_review"] = True
-        logger.info(f"[证据校验] {match.get('requirement_name', '?')}: evidence为空 → 降级 cannot_judge")
+    location = match.get("evidence_location", "")
+    if not location or location in ("不适用", ""):
+        _downgrade_cannot_judge(match, "evidence_location 为空")
         return
 
-    # 模糊匹配：原文中能找到证据文本的核心部分（取前30字作为检索片段）
-    snippet = evidence[:60].strip()
-    if len(snippet) < 10:
-        return  # 证据太短，跳过验证
+    extracted = _resolve_location(location, resume)
 
-    # 在原文中查找最长的公共子串
-    raw_lower = raw_text.lower()
-    snippet_lower = snippet.lower()
-
-    # 逐段切分 snippet，看原文是否包含至少一个 ≥10 字符的片段
-    found = False
-    for window in (30, 20, 15, 10):
-        for i in range(0, len(snippet) - window + 1, max(1, window // 3)):
-            seg = snippet_lower[i:i + window]
-            if seg in raw_lower:
-                found = True
-                break
-        if found:
-            break
-
-    if not found:
-        match["confidence"] = min(match.get("confidence", 0.5), 0.4)
-        match["needs_human_review"] = True
+    if not extracted:
         match["evidence_support"] = "部分"
-        logger.warning(
-            f"[证据校验] {match.get('requirement_name', '?')}: "
-            f"证据文本在简历原文中未找到 → 标记需人工复核 "
-            f"(evidence前60字: {snippet[:60]})"
-        )
+        match["needs_human_review"] = True
+        logger.warning(f"[证据提取] {match.get('requirement_name', '?')}: 无法解析位置 '{location}'")
+        return
+
+    # 在原始文本中模糊验证
+    if _fuzzy_contains(extracted, raw_text):
+        match["evidence"] = extracted[:300]
+        match["evidence_support"] = "确凿"
+    else:
+        match["evidence"] = extracted[:300]
+        match["evidence_support"] = "部分"
+        match["needs_human_review"] = True
+        logger.warning(f"[证据提取] {match.get('requirement_name', '?')}: 提取文本在原文中未模糊匹配")
+
+
+def _downgrade_cannot_judge(match: dict, reason: str) -> None:
+    match["status"] = "cannot_judge"
+    match["confidence"] = min(match.get("confidence", 0.5), 0.3)
+    match["evidence_support"] = "信息不足"
+    match["needs_human_review"] = True
+    logger.info(f"[证据提取] {match.get('requirement_name', '?')}: {reason} → 降级 cannot_judge")
+
+
+def _resolve_location(location: str, resume: dict) -> str | None:
+    """解析 evidence_location，支持多路径（用 ; 或 ；分隔），返回第一个成功提取的文本。
+
+    支持的格式：
+    - "basic_info.work_years" / "basic_info.degree"
+    - "work_experiences[0].description" / "work_experiences[公司名].role"
+    - "work_experiences[0].responsibilities[2]" (嵌套索引)
+    - "projects[0].description" / "projects[项目名].description"
+    - 多路径: "basic_info.work_years; work_experiences[0].duration"
+    """
+    # 拆分多路径（中英文分号）
+    parts = re.split(r'[；;]', location)
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        result = _resolve_single_location(part, resume)
+        if result:
+            return result
+    return None
+
+
+def _resolve_single_location(loc: str, resume: dict) -> str | None:
+    """解析单个 evidence_location 路径。"""
+    loc = loc.strip()
+    # 去除注释性括号内容: （第3条：xxx）
+    loc = re.sub(r'[（(][^)）]*[）)]', '', loc).strip()
+    # 去除尾部描述: "第2句", "第3条"
+    loc = re.sub(r'\s*第\s*\d+\s*[句条款项].*$', '', loc).strip()
+
+    # Pattern: "basic_info.xxx"
+    if loc.startswith("basic_info."):
+        field = loc[len("basic_info."):].split('.')[0].split('[')[0].strip()
+        basic = resume.get("basic_info", {})
+        val = basic.get(field, "")
+        return str(val) if val else None
+
+    # Pattern: "work_experiences[N].sub_path" or "work_experiences[key].sub_path"
+    m = re.match(r"work_experiences?\[(.+?)\]\.(.+)", loc)
+    if m:
+        key = m.group(1).strip()
+        sub_path = m.group(2).strip()
+        return _navigate_list_field(resume.get("work_experiences", []), key, sub_path)
+
+    # Pattern: "projects[N].sub_path" or "projects[key].sub_path"
+    m = re.match(r"projects?\[(.+?)\]\.(.+)", loc)
+    if m:
+        key = m.group(1).strip()
+        sub_path = m.group(2).strip()
+        return _navigate_list_field(resume.get("projects", []), key, sub_path)
+
+    # Pattern: "skills ..."
+    if "skills" in loc.lower() or "skill" in loc.lower():
+        skills = resume.get("skills", [])
+        if isinstance(skills, list) and skills:
+            skill_strs = []
+            for s in skills[:5]:
+                if isinstance(s, dict):
+                    skill_strs.append(s.get("name", str(s)))
+                else:
+                    skill_strs.append(str(s))
+            return ", ".join(skill_strs)
+        return None
+
+    return None
+
+
+def _navigate_list_field(items: list, key: str, sub_path: str) -> str | None:
+    """在列表字段中按 key（数字索引或名称子串）定位元素，再按 sub_path 取字段。
+
+    sub_path 支持: "description", "responsibilities[2]", "responsibilities[2].xxx"
+    """
+    if not items:
+        return None
+
+    item = None
+    if key.isdigit():
+        idx = int(key)
+        if 0 <= idx < len(items):
+            item = items[idx]
+    else:
+        key_lower = key.lower()
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            haystack = (it.get("company", "") + it.get("role", "") + it.get("name", "")).lower()
+            if key_lower in haystack:
+                item = it
+                break
+
+    if item is None or not isinstance(item, dict):
+        return None
+
+    # sub_path 可能含嵌套索引: "responsibilities[2]" 或 "responsibilities[2].text"
+    m = re.match(r"(\w+)\[(\d+)\](?:\.(\w+))?", sub_path)
+    if m:
+        field = m.group(1)
+        idx = int(m.group(2))
+        deep_field = m.group(3)
+        nested_list = item.get(field, [])
+        if isinstance(nested_list, list) and 0 <= idx < len(nested_list):
+            val = nested_list[idx]
+            if isinstance(val, dict) and deep_field:
+                val = val.get(deep_field, str(val))
+            return str(val)[:300] if val else None
+        return None
+
+    # 简单字段: "description", "role", "duration"
+    val = item.get(sub_path, "")
+    return str(val)[:300] if val else None
+
+
+def _fuzzy_contains(extracted: str, raw_text: str) -> bool:
+    """检查 extracted 文本是否有 ≥15 字符的片段在 raw_text 中（大小写不敏感）。"""
+    if not extracted or not raw_text:
+        return False
+    text_lo = extracted[:200].lower().strip()
+    raw_lo = raw_text.lower()
+    for window in (50, 30, 20, 15):
+        if len(text_lo) < window:
+            continue
+        step = max(1, window // 4)
+        for i in range(0, len(text_lo) - window + 1, step):
+            if text_lo[i:i + window] in raw_lo:
+                return True
+    return False
 
 
 # ── 主函数 ────────────────────────────────────────────────
@@ -303,18 +421,16 @@ async def match(
         chain = prompt | llm
 
         resume_json_str = json.dumps(resume, ensure_ascii=False, indent=2)
-        raw_text = raw_resume_text or resume_json_str
 
         batches = [soft_requirements[i:i + BATCH_SIZE] for i in range(0, len(soft_requirements), BATCH_SIZE)]
         logger.info(f"分批并行: {len(soft_requirements)} 条软性要求 → {len(batches)} 批 (每批 {BATCH_SIZE} 条, thinking=on)")
 
         async def _run_batch(batch_reqs: list[dict]) -> list[dict]:
-            batch_synonyms = {r.get("id", ""): synonyms_map.get(r.get("id", ""), []) for r in batch_reqs}
+            batch_synonyms = {r.get("id", ""): synonyms_map.get(r.get("id", ""), [])[:5] for r in batch_reqs}
             invoke_args = {
                 "requirements_json": json.dumps(batch_reqs, ensure_ascii=False, indent=2),
                 "resume_json": resume_json_str,
                 "synonyms_json": json.dumps(batch_synonyms, ensure_ascii=False, indent=2),
-                "raw_resume_text": raw_text,
             }
 
             for attempt in (1, 2):
@@ -360,10 +476,10 @@ async def match(
             m["needs_human_review"] = True
             logger.info(f"[{m.get('requirement_name', '')}] satisfied 但 confidence={m.get('confidence')} < 0.6 → 强制改判 cannot_judge")
 
-    # Step 4.5: 证据校验关卡 —— 代码核对 AI 声称的证据是否真在简历原文中
+    # Step 4.5: 证据提取关卡 —— 代码根据 AI 的 evidence_location 从简历 JSON 提取原文
     if raw_resume_text:
         for m in matches:
-            _verify_evidence_in_text(m, raw_resume_text)
+            _extract_evidence_by_location(m, resume, raw_resume_text)
 
     # 补全缺失的 requirement（LLM 可能漏掉某些条目）
     for req in requirements:
