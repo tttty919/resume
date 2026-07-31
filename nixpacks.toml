@@ -1,0 +1,2 @@
+[start]
+cmd = "python -m backend.dev_server"
