@@ -22,6 +22,10 @@ __pycache__/
 temp_advice.txt
 temp_advice_from_docx.txt
 
+# Test artifacts (screening benchmark)
+screening_test_pdfs/
+test_screening_run.py
+
 # Test artifacts
 _test_result.json
 
