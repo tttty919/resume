@@ -27,6 +27,8 @@ class CandidateSlot:
     scoring: dict = field(default_factory=dict)
     stop_reason: str = ""
     pending_hr: list = field(default_factory=list)
+    hr_questions: dict = field(default_factory=dict)
+    agent_trace: list = field(default_factory=list)
     retry_count: int = 0
 
 @dataclass

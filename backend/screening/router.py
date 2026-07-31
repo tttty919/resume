@@ -56,10 +56,6 @@ async def _process_screening(
     api_key: str, base_url: str, model: str,
 ):
     """Background task: process each resume through the screening pipeline."""
-    from backend.skills.semantic_matcher.node import match
-    from backend.skills.risk_analyzer.node import analyze as analyze_risk
-    from backend.skills.recommendation_gen.node import generate as generate_recommendation
-
     session = get_session(sid)
     if not session:
         return
@@ -102,31 +98,37 @@ async def _process_screening(
             slot["name"] = resume_result.get("basic_info", {}).get("name", fname)
             slot["resume"] = resume_result
 
-            # ── Matching ──
+            # ── 自主筛选控制循环（Skill 3 起：匹配 + 自主找补 + 风险 + 推荐）──
+            # 原本是写死的 match → risk → recommendation 三步直线；
+            # 现在交给 ScreeningAgent.agent_loop 按候选人情况自主编排。
+            # 默认用 rule_decide（确定性、可审计、无额外 LLM 调用）；
+            # 若想让 LLM 参与决策，把 decide=rule_decide 换成 decide=None 即可。
+            from backend.workflows.controller import agent_loop, rule_decide
+
             emit(sid, "progress", {
                 "step": "matching", "index": idx, "total": len(session.candidates),
-                "message": f"正在匹配: {slot['name']}...",
+                "message": f"正在筛选: {slot['name']}...",
             })
-            match_result = await match(requirements, resume_result, text, api_key, base_url, model)
-            items = match_result.get("matches", [])
+
+            def _on_step(entry: dict, _idx=idx, _name=slot["name"]):
+                # 把控制器每一步决策实时推给前端（可审计）
+                emit(sid, "agent_step", {"index": _idx, "name": _name, **entry})
+
+            llm_cfg = {"api_key": api_key, "base_url": base_url, "model": model}
+            agent_result = await agent_loop(
+                requirements, resume_result, text, llm_cfg,
+                decide=rule_decide,
+                on_step=_on_step,
+            )
+
+            items = agent_result["matches"]
             slot["matches"] = items
-
-            # ── Risk Analysis ──
-            emit(sid, "progress", {
-                "step": "risk_analysis", "index": idx, "total": len(session.candidates),
-                "message": f"风险评估: {slot['name']}...",
-            })
-            risk_result = await analyze_risk(requirements, items, api_key, base_url, model)
-            slot["analysis"] = risk_result.get("analysis", {})
-
-            # ── Recommendation ──
-            emit(sid, "progress", {
-                "step": "recommendation", "index": idx, "total": len(session.candidates),
-                "message": f"生成推荐: {slot['name']}...",
-            })
-            rec_result = await generate_recommendation(requirements, items, None, slot["analysis"], api_key, base_url, model)
-            slot["scoring"] = rec_result.get("scoring", {})
-            slot["status"] = "done"
+            slot["analysis"] = agent_result["analysis"]
+            slot["scoring"] = agent_result["scoring"]
+            slot["pending_hr"] = agent_result.get("pending_hr", [])
+            slot["hr_questions"] = agent_result.get("hr_questions", {})
+            slot["agent_trace"] = agent_result.get("trace", [])
+            slot["status"] = "pending_hr" if slot["pending_hr"] else "done"
 
             emit(sid, "candidate_done", {
                 "index": idx, "name": slot["name"], "file_name": fname,
@@ -139,7 +141,19 @@ async def _process_screening(
                 "matches": slot["matches"],
                 "analysis": slot["analysis"],
                 "scoring": slot["scoring"],
+                "status": slot["status"],
+                "pending_hr": slot["pending_hr"],
+                "hr_questions": slot["hr_questions"],
+                "agent_trace": slot["agent_trace"],
             })
+
+            # 若有必须项需 HR 复核，单独发一条事件，方便前端弹出复核面板
+            if slot["pending_hr"]:
+                emit(sid, "candidate_pending_hr", {
+                    "index": idx, "name": slot["name"],
+                    "pending_hr": slot["pending_hr"],
+                    "hr_questions": slot["hr_questions"],
+                })
 
             # ── Save to cache ──
             try:
@@ -157,8 +171,12 @@ async def _process_screening(
     session.phase = "done"
     emit(sid, "complete", {"message": "筛选完成", "phase": "done"})
 
+    # 若有候选人待 HR 复核，延长会话存活时间，避免 HR 还没处理就被清理
+    has_pending = any(c.get("status") == "pending_hr" for c in session.candidates)
+    cleanup_delay = 3600 if has_pending else 300
+
     async def _delayed_cleanup():
-        await asyncio.sleep(300)
+        await asyncio.sleep(cleanup_delay)
         cleanup_session(sid)
     asyncio.create_task(_delayed_cleanup())
 
@@ -201,6 +219,8 @@ async def screening_start(request: Request):
 
     session = create_session(job_id, requirements, candidate_names)
     sid = session.id
+    # 存下凭据，供 HR 复核后局部重算
+    session.api_key, session.base_url, session.model = api_key, base_url, model
 
     asyncio.create_task(_process_screening(sid, job_id, files_data, api_key, base_url, model))
 
@@ -257,4 +277,102 @@ async def screening_status(sid: str):
         "phase": session.phase,
         "total": len(session.candidates),
         "active_idx": session.active_idx,
+    }
+
+
+@router.post("/hr_review/{sid}")
+async def screening_hr_review(sid: str, request: Request):
+    """HR 复核回填 (第4步)。
+
+    HR 对某候选人 pending_hr 的要求给出结论后，只重算受影响的要求 + 风险 + 推荐，
+    不重跑整个流水线。HR 确认的同义表达会写回知识库 (learn)，越用越准。
+
+    Body: {
+      index: int,                       # 候选人序号
+      decisions: {                      # 逐条 requirement 的 HR 结论
+        "<req_id>": {
+          "status": "satisfied|not_satisfied|cannot_judge",
+          "confidence": 0~1,            # 可选，默认 0.9
+          "evidence": "HR 补充的证据",   # 可选
+          "confirmed_synonym": "简历里被HR认可的同义表达"  # 可选 → 写回知识库
+        }
+      }
+    }
+    """
+    session = get_session(sid)
+    if not session:
+        return {"success": False, "message": "会话不存在"}
+
+    body = await request.json()
+    idx = body.get("index")
+    decisions = body.get("decisions", {}) or {}
+    if idx is None or not decisions:
+        return {"success": False, "message": "缺少 index 或 decisions"}
+
+    slot = next((c for c in session.candidates if c.get("index") == idx), None)
+    if slot is None:
+        return {"success": False, "message": "候选人不存在"}
+
+    requirements = session.requirements
+    req_name = {r.get("id", ""): r.get("name", "") for r in requirements}
+    matches = slot.get("matches", [])
+    by_id = {m.get("requirement_id", ""): m for m in matches}
+
+    # 1) 应用 HR 结论（覆盖对应要求），并记录审计字段
+    for rid, dec in decisions.items():
+        m = by_id.get(rid)
+        if m is None:
+            m = {"requirement_id": rid, "requirement_name": req_name.get(rid, rid)}
+            matches.append(m)
+            by_id[rid] = m
+        m["status"] = dec.get("status", m.get("status", "cannot_judge"))
+        m["confidence"] = float(dec.get("confidence", 0.9))
+        if dec.get("evidence"):
+            m["evidence"] = dec["evidence"]
+        m["needs_human_review"] = False
+        m["hr_override"] = True
+
+        # 2) 反馈回路：HR 认可的同义词写回 ChromaDB
+        syn = dec.get("confirmed_synonym")
+        if syn:
+            try:
+                from backend.skills.semantic_matcher.tools import learn
+                learn(req_name.get(rid, rid), syn)
+            except Exception as e:
+                log.warning(f"[HR复核] 同义词写回失败: {e}")
+
+    # 从待复核列表移除已处理项
+    slot["matches"] = matches
+    slot["pending_hr"] = [r for r in slot.get("pending_hr", []) if r not in decisions]
+
+    # 3) 只重算受影响：风险 + 推荐（复用 controller.rerun_affected）
+    from backend.workflows.controller import rerun_affected
+    try:
+        rerun = await rerun_affected(
+            requirements, matches, matches,
+            session.api_key, session.base_url, session.model,
+        )
+        slot["analysis"] = rerun.get("risk_analysis", slot.get("analysis", {}))
+        slot["scoring"] = rerun.get("recommendation", {}).get("scoring", slot.get("scoring", {}))
+    except Exception as e:
+        log.error(f"[HR复核] 局部重算失败: {e}")
+        return {"success": False, "message": f"重算失败: {e}"}
+
+    slot["status"] = "pending_hr" if slot["pending_hr"] else "done"
+
+    emit(sid, "candidate_reviewed", {
+        "index": idx, "name": slot.get("name", ""),
+        "status": slot["status"],
+        "pending_hr": slot["pending_hr"],
+        "matches": slot["matches"],
+        "analysis": slot["analysis"],
+        "scoring": slot["scoring"],
+    })
+
+    return {
+        "success": True,
+        "index": idx,
+        "status": slot["status"],
+        "pending_hr": slot["pending_hr"],
+        "scoring": slot["scoring"],
     }

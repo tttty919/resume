@@ -173,8 +173,14 @@ async def match(
     api_key: str = "",
     base_url: str = "",
     model: str = "",
+    extra_synonyms: dict[str, list[str]] | None = None,
 ) -> dict:
-    """独立的匹配函数，可从 dev_server 直接调用"""
+    """独立的匹配函数，可从 dev_server 直接调用
+
+    extra_synonyms: 可选。{requirement_id: [同义词...]}，由控制器（ScreeningAgent）
+        在动态决策时注入 —— 例如某条要求首轮判不了、控制器主动查了同义词后，
+        把结果传进来重新匹配。默认 None 时行为与原来完全一致（零影响）。
+    """
     if not isinstance(requirements, list):
         logger.error(f"requirements 类型错误: {type(requirements)}, value={str(requirements)[:100]}")
         return {"matches": []}
@@ -222,6 +228,15 @@ async def match(
 
     logger.info(f"RAG 查询: {rag_hits} 次检索, {rag_skips} 次跳过")
 
+    # Step 2.5: 合并控制器注入的同义词（ScreeningAgent 动态决策时传入，默认无）
+    if extra_synonyms:
+        for rid, syns in extra_synonyms.items():
+            if not syns:
+                continue
+            merged = list(dict.fromkeys(synonyms_map.get(rid, []) + list(syns)))
+            synonyms_map[rid] = merged
+            logger.info(f"控制器注入同义词 [{rid}]: +{len(syns)} 条 → 合并后 {len(merged)} 条")
+
     # Step 3: LLM 匹配 + 证据提取（分批并行，仅软性要求）
     llm_matches = []
     if soft_requirements:
@@ -239,18 +254,28 @@ async def match(
 
         async def _run_batch(batch_reqs: list[dict]) -> list[dict]:
             batch_synonyms = {r.get("id", ""): synonyms_map.get(r.get("id", ""), []) for r in batch_reqs}
-            response = await _asyncio.to_thread(chain.invoke, {
+            invoke_args = {
                 "requirements_json": json.dumps(batch_reqs, ensure_ascii=False, indent=2),
                 "resume_json": resume_json_str,
                 "synonyms_json": json.dumps(batch_synonyms, ensure_ascii=False, indent=2),
                 "raw_resume_text": raw_text,
-            })
-            try:
-                parsed = parse_llm_json(response.content)
-                return parsed.get("matches", [])
-            except ParseException:
-                logger.warning(f"批次解析失败，{len(batch_reqs)} 条要求返回空，LLM 返回前200字: {str(response.content)[:200]}")
-                return []
+            }
+
+            for attempt in (1, 2):
+                response = await _asyncio.to_thread(chain.invoke, invoke_args)
+                try:
+                    parsed = parse_llm_json(response.content)
+                    if isinstance(parsed, list):
+                        return parsed
+                    if isinstance(parsed, dict):
+                        return parsed.get("matches", [])
+                    raise ParseException(f"JSON 顶层类型异常: {type(parsed)}", file_type="llm_response")
+                except ParseException:
+                    if attempt == 1:
+                        logger.warning(f"批次解析失败（第1次），{len(batch_reqs)} 条要求，重试一次")
+                    else:
+                        logger.warning(f"批次解析失败（重试后仍失败），{len(batch_reqs)} 条要求返回空，LLM 完整返回: {response.content}")
+            return []
 
         batch_results = await _asyncio.gather(*[_run_batch(b) for b in batches])
 

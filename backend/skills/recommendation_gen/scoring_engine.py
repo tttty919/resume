@@ -59,6 +59,15 @@ def score_matches(
 
     importance_weight = {"high": 3, "medium": 2, "low": 1}
 
+    # validated_items 是 HR 改判/证据校验之后的状态（见本文件顶部核心规则 2、3），
+    # 硬规则定级必须以它为准 —— 否则 HR 通过「一键计算」改判 must 项之后，
+    # 这里仍按 matches 里 Skill3 的旧结论算，改判永远无法真正影响推荐等级。
+    validated_status_map = {}
+    for item in validated_items:
+        rid = item.get("requirement_id", "")
+        if rid:
+            validated_status_map[rid] = item.get("status")
+
     # ═══════════════════════════════════════════════════════════════
     # 一、匹配结论 —— 影响推荐等级（与置信度无关）
     # ═══════════════════════════════════════════════════════════════
@@ -74,7 +83,7 @@ def score_matches(
         req = _resolve_req(m)
         req_type = req.get("type", "bonus")
         importance = req.get("importance", "medium")
-        status = m.get("status", "cannot_judge")
+        status = validated_status_map.get(rid, m.get("status", "cannot_judge"))
 
         w = importance_weight.get(importance, 2)
         if req_type == "must":

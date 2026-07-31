@@ -19,6 +19,10 @@ class ScreeningSession:
     active_idx: int = -1
     created_at: str = ""
     events: list = field(default_factory=list)  # [(event_type, payload), ...] for replay
+    # LLM 凭据（供 HR 复核后局部重算使用；仅内存，随进程重启清空）
+    api_key: str = ""
+    base_url: str = ""
+    model: str = ""
 
     def __post_init__(self):
         if not self.created_at:

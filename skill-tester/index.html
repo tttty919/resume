@@ -677,6 +677,8 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
 .btn-icon svg{width:16px;height:16px}
 .btn-icon:hover{border-color:rgba(217,119,87,.32);color:var(--accent);background:rgba(255,240,235,.8)}
 .btn-icon.danger:hover{border-color:rgba(220,38,38,.28);color:var(--danger);background:rgba(220,38,38,.08)}
+.btn-icon.confirm{border-color:rgba(22,163,74,.3);color:#3D8B4F;background:rgba(22,163,74,.08)}
+.btn-icon.confirm:hover{border-color:rgba(22,163,74,.45);color:#2f6e3d;background:rgba(22,163,74,.14)}
 .empty-state{text-align:center;padding:52px 24px;background:rgba(255,255,255,.42);border:1px dashed var(--line);border-radius:18px}
 .empty-state .empty-icon{color:var(--muted);margin-bottom:14px}
 .empty-state .empty-icon svg{width:48px;height:48px}
@@ -971,6 +973,7 @@ body{font-family:"SF Pro Display","SF Pro Text",-apple-system,BlinkMacSystemFont
         <div id="resumeList"></div>
 
         <div class="bottom-actions" id="bottomActions" style="display:none">
+          <button class="btn ghost" id="confirmAllParseBtn" onclick="confirmAllParsedResumes()">全部确认解析结果</button>
           <button class="btn primary" id="startScreeningBtn" onclick="startScreening()" style="padding:12px 28px;font-size:15px">一键匹配</button>
           <button class="btn primary" id="startAgentBtn" onclick="startAgentFlow()" style="display:none">Agent 智能分析</button>
           <span id="launchJob" style="display:none">未选择</span>
@@ -2067,11 +2070,14 @@ function renderResumeRow(c) {
   // 解析真正完成的标志：拿到了结构化简历数据（resume_parsed 事件回填），或整条流水线已 done。
   // 匹配/风险/推荐阶段虽然 status 不是 'done'，但简历早已解析好，这里同样显示“解析完成”。
   var isParsed = c.status === 'done' || !!(c.resume && c.resume.basic_info);
+  var needsConfirm = isParsed && !c._parseConfirmed;
   var statusHtml = c.status === 'error'
     ? '<span class="ri-tag error">' + uiIcon('alert') + '解析失败</span>'
-    : isParsed
-      ? '<span class="ri-tag parsed">' + uiIcon('check') + '解析完成</span>'
-      : '<span class="ri-tag pending">' + uiIcon('loader') + '解析中</span>';
+    : needsConfirm
+      ? '<span class="ri-tag pending">' + uiIcon('info') + '解析结果待确认</span>'
+      : isParsed
+        ? '<span class="ri-tag parsed">' + uiIcon('check') + '已确认</span>'
+        : '<span class="ri-tag pending">' + uiIcon('loader') + '解析中</span>';
   var meta = [statusHtml, c.parseTime || '', c.fileName || '', [degree, school, major].filter(Boolean).join(' · ')].filter(Boolean).join('');
   var skillHtml = skills.length ? '<div class="ri-skills">' + skills.map(function(s) { return '<span class="ri-skill">' + escHtml(s) + '</span>'; }).join('') + '</div>' : '';
   var errorHtml = c.errorMsg ? '<span style="color:var(--danger)">' + escHtml(c.errorMsg) + '</span>' : '';
@@ -2083,6 +2089,7 @@ function renderResumeRow(c) {
       skillHtml +
     '</div>' +
     '<div class="resume-actions">' +
+      (needsConfirm ? '<button class="btn-icon confirm" title="确认解析结果无误" onclick="event.stopPropagation();confirmResumeParse(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg></button>' : '') +
       '<button class="btn-icon" title="编辑" onclick="event.stopPropagation();openResumeEditModal(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>' +
       '<button class="btn-icon" title="重新解析" onclick="event.stopPropagation();reparseResume(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>' +
       '<button class="btn-icon danger" title="删除" onclick="event.stopPropagation();deleteResume(' + c.index + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
@@ -2113,9 +2120,26 @@ function reparseResume(index) {
   c.parseTime = '解析中...';
   c.resume = null;
   c.raw_text = '';
+  c._parseConfirmed = false;
   renderResumeList();
   refreshResumeParseStatus();
   parseSingleResume(c.file);
+}
+
+function confirmResumeParse(index) {
+  var c = screenState.candidates.find(function(x) { return x.index === index; });
+  if(!c) return;
+  c._parseConfirmed = true;
+  renderResumeList();
+}
+
+function confirmAllParsedResumes() {
+  var pending = screenState.candidates.filter(function(c) {
+    return (c.status === 'done' || !!(c.resume && c.resume.basic_info)) && !c._parseConfirmed;
+  });
+  if(!pending.length) { alert('没有待确认的解析结果'); return; }
+  pending.forEach(function(c) { c._parseConfirmed = true; });
+  renderResumeList();
 }
 
 let editingResumeIndex = null;
@@ -2258,6 +2282,7 @@ function saveResumeEditModal() {
   c.resume.work_experiences = Array.from(document.querySelectorAll('#emWorkBlocks .edit-block')).map(readResumeWorkBlock);
   c.resume.project_experiences = Array.from(document.querySelectorAll('#emProjectBlocks .edit-block')).map(readResumeProjectBlock);
   c.name = basic.name || c.name;
+  c._parseConfirmed = true;
   closeResumeEditModal();
   renderResumeList();
 }
@@ -2435,6 +2460,7 @@ async function parseResumes() {
         } else {
           var form = new FormData();
           form.append('file', file, file.name);
+          form.append('job_id', jobSel.value);
           appendLLMConfig(form);
           var response = await fetch('/api/extract-resume', { method: 'POST', body: form });
           payload = await response.json();
@@ -2789,6 +2815,12 @@ function getAgentStage(candidate) {
   if(!candidate) return {text: '等待处理', cls: ''};
   if(candidate.status === 'error') return {text: '处理失败', cls: 'error'};
   if(candidate._reviewed) return {text: 'HR 已确认', cls: 'stable'};
+  // 硬性不满足优先于"挂起待HR补充"：候选人已有确定性负面结论时，不应再显示等待HR的文案。
+  if((candidate.status === 'paused' || candidate.status === 'done') && !candidateNeedsHR(candidate)) {
+    var matches = Array.isArray(candidate.matches) ? candidate.matches : [];
+    var hasHardFail = matches.some(function(m) { return m.status === 'not_satisfied'; });
+    return {text: hasHardFail ? '已自动判定（不推荐）' : '已自动判定（推荐）', cls: 'stable'};
+  }
   if(candidate.status === 'paused' || (candidate.agentPendingHR && candidate.agentPendingHR.length)) {
     return {text: '等待 HR 补充', cls: 'waiting'};
   }
@@ -2800,14 +2832,40 @@ function getAgentStage(candidate) {
   return {text: '等待处理', cls: ''};
 }
 
+function getEffectiveMatchStatus(candIndex, m) {
+  var rid = m.requirement_id || m.reqId || '';
+  var overrideKey = candIndex + '-' + rid;
+  var override = (typeof candIndex === 'number') && screenState.overrides && screenState.overrides[overrideKey];
+  return override ? override.newStatus : (m.status || 'cannot_judge');
+}
+
 function candidateNeedsHR(candidate) {
   if(!candidate) return false;
+
+  // 硬性不满足优先级最高：即使 agent 因为另一条 must 项 cannot_judge 而挂起
+  // （status='paused'/agentPendingHR 非空），只要已经命中确定性负面结论，就不需要 HR 确认。
+  // 命中与否看的是「当前有效状态」——HR 改判过的项按改判结果算，尚未改判的项按原始结论算，
+  // 这样 HR 把硬性不满足改判掉之后才能重新触发一键计算/确认闭环。
+  var matches = Array.isArray(candidate.matches) ? candidate.matches : [];
+  var hasHardFail = matches.some(function(m) { return getEffectiveMatchStatus(candidate.index, m) === 'not_satisfied'; });
+  if(hasHardFail) return false;
+
   if(candidate.status === 'paused') return true;
   if(candidate.agentPendingHR && candidate.agentPendingHR.length) return true;
-  var matches = Array.isArray(candidate.matches) ? candidate.matches : [];
+
+  // 存在尚未提交「一键计算」的改判时，后端算出的 confidence_assessment 已经是改判前的旧结论，
+  // 不能再当真——直接按当前有效状态重新判断，等一键计算跑完、覆盖清空后才恢复信任后端结论。
+  var hasPendingOverride = (typeof candidate.index === 'number') && screenState.overrides &&
+    Object.keys(screenState.overrides).some(function(k) { return k.split('-')[0] === String(candidate.index); });
+
+  if(!hasPendingOverride) {
+    var review = candidate.scoring && candidate.scoring.confidence_assessment;
+    if(review && typeof review.needs_human_review === 'boolean') return review.needs_human_review;
+  }
+
   return matches.some(function(m) {
-    var st = m.status || 'cannot_judge';
-    return st === 'cannot_judge' || st === 'not_satisfied' || (m.confidence || 0) < 0.65;
+    var st = getEffectiveMatchStatus(candidate.index, m);
+    return st === 'cannot_judge' || (st === 'satisfied' && (m.confidence || 0) < 0.65);
   });
 }
 
@@ -2886,6 +2944,11 @@ async function startScreening() {
       return c;
     });
   if(doneCandidates.length === 0) { alert('请先解析简历'); return; }
+  var unconfirmed = doneCandidates.filter(function(c) { return !c._parseConfirmed; });
+  if(unconfirmed.length > 0) {
+    alert('还有 ' + unconfirmed.length + ' 份简历解析结果待确认，请在简历列表中点击"确认无误"或编辑修正后再开始匹配');
+    return;
+  }
   if(!screenState.requirements.length) { alert('缺少岗位要求，请重新选择岗位'); return; }
   if(screenState.running) return;
   var jobSel = document.getElementById('targetJobSelect');
@@ -3499,9 +3562,9 @@ function renderInlineReview(index, targetBodyId) {
   var reqMap = {};
   reqs.forEach(function(r) { if(r.id) reqMap[r.id] = r; if(r.name) reqMap[r.name] = r; });
 
-  var notSatisfied = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'not_satisfied'; });
-  var cannotJudge = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'cannot_judge'; });
-  var satisfied = matches.filter(function(m) { return (m.status || 'cannot_judge') === 'satisfied'; });
+  var notSatisfied = matches.filter(function(m) { return getEffectiveMatchStatus(c.index, m) === 'not_satisfied'; });
+  var cannotJudge = matches.filter(function(m) { return getEffectiveMatchStatus(c.index, m) === 'cannot_judge'; });
+  var satisfied = matches.filter(function(m) { return getEffectiveMatchStatus(c.index, m) === 'satisfied'; });
 
   var html = showAgentPanel ? renderAgentPanel(c) : '';
   // Summary with scoring rules
@@ -3588,9 +3651,10 @@ function renderInlineReview(index, targetBodyId) {
       '</div>';
   }
 
-  // Override buttons for unsatisfied/cannot_judge items
-  var actionable = notSatisfied.concat(cannotJudge);
-  if(actionable.length > 0) {
+  // Override buttons for unsatisfied/cannot_judge items — gated by统一的 candidateNeedsHR() 优先级规则
+  // (硬性不满足 → 无需HR直接收尾；全部满足 → 无需HR直接收尾；其他 → 仍需HR点击确认)
+  var needsHR = candidateNeedsHR(c);
+  if(needsHR) {
     var actionTaskId = screenState.taskId || screenState.sessionId || activeScreenTaskId || '';
     var hasPending = Object.keys(screenState.overrides).some(function(k) {
       return k.split('-')[0] === String(index);
@@ -3609,6 +3673,11 @@ function renderInlineReview(index, targetBodyId) {
         '<button class="btn primary" onclick="confirmCandidateReview(' + index + ',\'' + attr(actionTaskId) + '\')" style="padding:6px 16px;font-size:12px">确认该候选人结果</button>';
     }
     html += '<div class="progress-card-actions">' + actionsInner + '</div>';
+  } else if(!c._reviewed) {
+    var autoLabel = notSatisfied.length > 0
+      ? '系统已自动判定：暂不推荐（硬性不满足，无需HR确认）'
+      : '系统已自动判定：推荐通过（全部满足，无需HR确认）';
+    html += '<div class="progress-card-actions"><span style="font-size:11px;color:var(--muted);line-height:28px">' + escHtml(autoLabel) + '</span></div>';
   }
 
   body.innerHTML = html;
@@ -4200,6 +4269,7 @@ function mapScreenCandidate(c, index) {
   const matches = c.matches || [];
   return {
     id: `cand-${c.index}`,
+    index: c.index,
     job_id: c.job_id || c.jobId || (document.getElementById('targetJobSelect') ? document.getElementById('targetJobSelect').value : ''),
     requirements: (screenState.requirements || []).slice(),
     name: c.name,
@@ -4890,11 +4960,13 @@ function renderReviewPreviewCandidate(c, i) {
   var resume = c.resume || {};
   var basic = resume.basic_info || {};
   var meta = [tier, basic.school, basic.degree, basic.major, c.fileName].filter(Boolean).join(' · ');
-  var pillCls = c.status === 'error' ? 'error' : c._reviewed ? 'reviewed' : ready ? 'done' : 'pending';
-  var pillText = c.status === 'error' ? '处理失败' : c._reviewed ? '已确认' : ready ? (c.status === 'paused' ? '需复核' : '待复核') : '处理中';
+  var needsHR = ready && candidateNeedsHR(c);
+  var autoDecided = ready && !c._reviewed && !needsHR;
+  var pillCls = c.status === 'error' ? 'error' : c._reviewed ? 'reviewed' : autoDecided ? 'reviewed' : ready ? 'done' : 'pending';
+  var pillText = c.status === 'error' ? '处理失败' : c._reviewed ? '已确认' : autoDecided ? '已自动判定' : ready ? (c.status === 'paused' ? '需复核' : '待复核') : '处理中';
   var actionHtml = ready
     ? '<div class="preview-status">' +
-        (!c._reviewed ? '<button class="btn primary" onclick="event.stopPropagation();confirmCandidateReview(' + c.index + ',\'' + attr(taskId) + '\')" style="padding:8px 14px;font-size:12px">确认</button>' : '') +
+        (!c._reviewed && needsHR ? '<button class="btn primary" onclick="event.stopPropagation();confirmCandidateReview(' + c.index + ',\'' + attr(taskId) + '\')" style="padding:8px 14px;font-size:12px">确认</button>' : '') +
         '<button class="btn ghost" onclick="event.stopPropagation();toggleReviewPreview(' + c.index + ',\'' + attr(taskId) + '\')" style="padding:8px 14px;font-size:12px">展开</button>' +
       '</div>'
     : '<div class="preview-status empty"></div>';
@@ -5399,7 +5471,8 @@ function openHROverride(candidateId, reqId, taskId) {
   if (!candidate) return;
   var matchItem = candidate.matchItems.find(function(m){return m.reqId === reqId;});
   if (!matchItem) return;
-  var req = JOB_REQUIREMENTS.find(function(r){return r.id === reqId;});
+  var req = JOB_REQUIREMENTS.find(function(r){return r.id === reqId;}) ||
+    (screenState.requirements || []).find(function(r){return r.id === reqId;});
   var sourceLabel = EVIDENCE_SOURCE_LABEL[matchItem.evidence_source] || matchItem.evidence_source;
   var statusLabel = {satisfied:'满足', not_satisfied:'不满足', cannot_judge:'无法判断'}[matchItem.status];
 

@@ -273,6 +273,7 @@ async def extract_resume(
     api_key: str = Form(""),
     base_url: str = Form(""),
     model: str = Form(""),
+    job_id: str = Form(""),
 ):
     """Skill 2: 上传 PDF/DOCX → 文档解析 → LLM 结构化提取"""
     api_key = api_key or settings.deepseek.api_key
@@ -303,6 +304,11 @@ async def extract_resume(
             text = cached["raw_text"]
             result = cached["parsed_resume"]
             images_count = 0
+            if job_id and cached.get("job_id") != job_id:
+                try:
+                    cache_save(str(tmp_path), text, result, job_id)
+                except Exception as e:
+                    log.warning(f"[Cache] job_id 关联更新失败 ({file.filename}): {e}")
         else:
             # Step 1: 文档解析
             log.info(f"文档解析开始: {file.filename}")
@@ -319,7 +325,7 @@ async def extract_resume(
 
             # Save to cache
             try:
-                cache_save(str(tmp_path), text, result)
+                cache_save(str(tmp_path), text, result, job_id)
             except Exception as e:
                 log.warning(f"[Cache] 保存失败 ({file.filename}): {e}")
 
@@ -1811,10 +1817,7 @@ async def screen_session(
     emit(sid, "session_created", {"session_id": sid, "total": len(file_records)})
 
     async def background_pipeline():
-        from backend.skills.semantic_matcher.node import match
-        from backend.skills.risk_analyzer.node import analyze as analyze_risk
-        from backend.skills.recommendation_gen.node import generate as generate_recommendation
-        from backend.workflows.controller import ScreeningAgent
+        from backend.workflows.controller import agent_loop, llm_decide
 
         session = get_session(sid)
         total = len(file_records)
@@ -1909,62 +1912,37 @@ async def screen_session(
                     "resume": resume_result, "raw_text": slot.raw_text,
                 })
 
-                # Matching
+                # ── 自主筛选（agent_loop：匹配 + 自主决策工具调用 + 风险/推荐收尾）──
                 emit(sid, "progress", {"step": "resume_step", "index": idx, "total": total,
-                    "sub_step": "语义匹配", "message": f"[{idx+1}/{total}] {slot.name} — 语义匹配..."})
+                    "sub_step": "自主筛选", "message": f"[{idx+1}/{total}] {slot.name} — 自主筛选（匹配/风险/推荐）..."})
                 slot.status = "matching"
-                match_result = await match(requirements_local, resume_result, slot.raw_text, api_key, base_url, model)
-                slot.matches = match_result.get("matches", [])
-                agent = ScreeningAgent(requirements_local)
-                decision = agent.decide_after_match(slot.matches)
+
+                def _make_on_step(_slot):
+                    def _on_step(entry):
+                        _slot.agent_trace.append(entry)
+                        emit(sid, "agent_step", {"index": _slot.index, "name": _slot.name, **entry})
+                    return _on_step
+
+                llm_cfg = {"api_key": api_key, "base_url": base_url, "model": model}
+                agent_result = await agent_loop(
+                    requirements_local, resume_result, slot.raw_text, llm_cfg,
+                    decide=llm_decide, on_step=_make_on_step(slot),
+                )
+                slot.matches = agent_result["matches"]
+                slot.hr_questions = agent_result["hr_questions"]
                 emit(sid, "agent_check", {
                     "index": idx,
                     "name": slot.name,
-                    "action": decision["action"],
-                    "should_stop": decision["should_stop"],
-                    "stop_reason": decision["reason"],
-                    "pending_hr": decision["pending_hr"],
-                    "retry_count": decision["retry_count"],
+                    "action": "agent_loop",
+                    "should_stop": True,
+                    "stop_reason": agent_result["stop_reason"],
+                    "pending_hr": agent_result["pending_hr"],
+                    "retry_count": agent_result["iterations_used"],
                 })
-                if decision["action"] == "retry_unresolved":
-                    unresolved = decision["unresolved"]
-                    retry_count = agent.mark_retry()
-                    emit(sid, "agent_retry", {
-                        "index": idx,
-                        "name": slot.name,
-                        "message": f"Agent: {len(unresolved)} 项要求未解决，重试第 {retry_count} 次...",
-                        "unresolved_ids": [r.get("id", "") for r in unresolved],
-                    })
-                    retry_result = await match(unresolved, resume_result, slot.raw_text, api_key, base_url, model)
-                    retry_map = {m.get("requirement_id", ""): m for m in retry_result.get("matches", [])}
-                    for item in slot.matches:
-                        rid = item.get("requirement_id", "")
-                        if rid in retry_map:
-                            item.update(retry_map[rid])
-                    decision = agent.decide_after_retry(slot.matches)
-                    emit(sid, "agent_check", {
-                        "index": idx,
-                        "name": slot.name,
-                        "action": decision["action"],
-                        "should_stop": decision["should_stop"],
-                        "stop_reason": decision["reason"],
-                        "pending_hr": decision["pending_hr"],
-                        "retry_count": decision["retry_count"],
-                    })
 
-                # Risk analysis
-                emit(sid, "progress", {"step": "resume_step", "index": idx, "total": total,
-                    "sub_step": "风险分析", "message": f"[{idx+1}/{total}] {slot.name} — 风险分析..."})
-                slot.status = "risk_analysis"
-                risk_result = await analyze_risk(requirements_local, slot.matches, api_key, base_url, model)
-                slot.analysis = risk_result.get("analysis", {})
-
-                # Recommendation
-                emit(sid, "progress", {"step": "resume_step", "index": idx, "total": total,
-                    "sub_step": "生成推荐", "message": f"[{idx+1}/{total}] {slot.name} — 生成推荐..."})
-                rec_result = await generate_recommendation(requirements_local, slot.matches, slot.matches, slot.analysis, api_key, base_url, model)
-                slot.scoring = rec_result.get("scoring", {})
-                summary = rec_result.get("summary", {})
+                slot.analysis = agent_result["analysis"]
+                slot.scoring = agent_result["scoring"]
+                summary = agent_result["summary"]
                 slot.status = "done"
 
                 emit(sid, "candidate_done", {
@@ -1977,11 +1955,13 @@ async def screen_session(
                     "must_satisfied": slot.scoring.get("counts", {}).get("must_satisfied"),
                     "must_total": slot.scoring.get("counts", {}).get("must_total"),
                     "recommendation": summary.get("recommendation"),
-                    "recommendation_reason": rec_result.get("recommendation_reason", ""),
+                    "recommendation_reason": agent_result["recommendation_reason"],
                     "core_advantages": summary.get("core_advantages", []),
                     "key_risks": summary.get("key_risks", []),
                     "human_review_questions": summary.get("human_review_questions", []),
                     "interview_suggestions": slot.analysis.get("interview_suggestions", []),
+                    "pending_hr": agent_result["pending_hr"],
+                    "hr_questions": slot.hr_questions,
                     "matches": slot.matches,
                     "analysis": slot.analysis,
                     "scoring": slot.scoring,
